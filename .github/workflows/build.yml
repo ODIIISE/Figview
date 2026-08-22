@@ -20,7 +20,7 @@ jobs:
           node-version: '20'
 
       - name: Install Tauri CLI
-        run: npm install -g @tauri-apps/cli@^2
+        run: cargo install tauri-cli --version "^2"
 
       - name: Build Windows installer
         run: cargo tauri build --bundles msi,nsis
