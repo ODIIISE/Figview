@@ -1,0 +1,31 @@
+{
+  "productName": "FIG Viewer",
+  "version": "0.1.0",
+  "identifier": "com.odiise.figviewer",
+  "build": {
+    "frontendDist": "../src",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [{
+      "title": "FIG Viewer",
+      "width": 1400,
+      "height": 900,
+      "minWidth": 900,
+      "minHeight": 600,
+      "center": true
+    }]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico", "icons/icon.png"],
+    "fileAssociations": [{
+      "ext": ["fig"],
+      "name": "Figma Design File",
+      "role": "Viewer"
+    }]
+  }
+}
