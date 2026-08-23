@@ -18,13 +18,31 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(state)
+        .setup(|_app| {
+            // Renderer is initialized lazily when the frontend calls init_renderer
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::take_startup_path,
             commands::open_file,
             commands::open_file_bytes,
             commands::close_file,
-            commands::get_image,
             commands::get_documents,
+            commands::get_layer_tree,
+            commands::get_node_properties,
+            commands::init_renderer,
+            commands::render_frame,
+            commands::set_page,
+            commands::set_zoom,
+            commands::zoom_at,
+            commands::pan_camera,
+            commands::fit_page,
+            commands::select_node,
+            commands::fit_node,
+            commands::resize_viewport,
+            commands::get_zoom,
+            commands::get_camera_state,
+            commands::get_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

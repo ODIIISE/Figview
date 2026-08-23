@@ -1,0 +1,21 @@
+[package]
+name = "fig-renderer"
+version = "0.1.0"
+edition = "2021"
+description = "Native GPU renderer for Figma .fig documents"
+
+[dependencies]
+fig-parser = { path = "../fig-parser" }
+wgpu = "0.20"
+bytemuck = { version = "1", features = ["derive"] }
+raw-window-handle = "0.6"
+lyon_tessellation = "1.0"
+lyon_path = "1.0"
+lyon_geom = "1.0"
+log = "0.4"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_Graphics_Gdi"] }
+
+[dev-dependencies]
+futures = "0.3"

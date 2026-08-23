@@ -34,11 +34,12 @@ button{font:inherit}
 #zoom-lvl{min-width:48px;text-align:center;color:var(--tx2);font-size:11px}
 #canvas-wrap{flex:1;overflow:hidden;position:relative;background:#e5e5e5;touch-action:none;cursor:default}
 #canvas-wrap.panning{cursor:grabbing}
-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+canvas{position:absolute;inset:0;display:block}
 #props{width:210px;background:var(--bg2);border-left:1px solid var(--bo);padding:10px;overflow-y:auto;font-size:11px;flex-shrink:0}
 .pg{margin-bottom:9px}.pl{color:var(--tx2);font-size:10px;margin-bottom:2px}.pv{color:var(--tx);word-break:break-word}
 .swatch{display:inline-block;width:10px;height:10px;border-radius:2px;border:1px solid var(--bo);margin-right:4px;vertical-align:-1px}
 .empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:14px}
+#renderer-status{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);color:var(--tx2);padding:2px 8px;border-radius:4px;font-size:10px;pointer-events:none;opacity:.7}
 #guide-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.56);align-items:center;justify-content:center;z-index:20}
 #guide-backdrop.open{display:flex}
 #guide{width:min(430px,calc(100vw - 32px));background:var(--bg2);border:1px solid var(--bo);border-radius:8px;box-shadow:0 18px 60px rgba(0,0,0,.5);padding:18px}
@@ -49,7 +50,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 </head>
 <body>
 <div id="app">
-  <div id="tab-bar"><div class="tab-placeholder empty" style="padding:8px;justify-content:flex-start;flex:1">Choose Open, press Ctrl+O, or drop a .fig file here</div></div>
+  <div id="tab-bar"><div class="empty" style="padding:8px;justify-content:flex-start;flex:1">Choose Open, press Ctrl+O, or drop a .fig file here</div></div>
   <div id="main">
     <div id="sidebar">
       <div class="panel-header">PAGES</div>
@@ -62,7 +63,6 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
         <div class="toolbar-group">
           <button id="open-file" type="button" title="Open a .fig file">Open</button>
           <button id="fit" type="button" title="Fit the page">Fit page</button>
-          <button id="fit-selection" type="button" title="Fit the selected layer">Fit selection</button>
           <button id="zout" type="button" aria-label="Zoom out" title="Zoom out">-</button>
           <span id="zoom-lvl">100%</span>
           <button id="zin" type="button" aria-label="Zoom in" title="Zoom in">+</button>
@@ -72,7 +72,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
           <button id="z100" type="button" title="Set zoom to 100%">100%</button>
         </div>
       </div>
-      <div id="canvas-wrap"><canvas id="c"></canvas></div>
+      <div id="canvas-wrap"><canvas id="c"></canvas><div id="renderer-status"></div></div>
     </div>
     <div id="props"></div>
   </div>
@@ -97,10 +97,11 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 </div>
 
 <script type="module">
-let doc = null;
-let activePage = null;
+// ── State ──
+let docMeta = null;        // DocumentMetadata from Rust
+let activePageIndex = 0;
 let selection = null;
-let nodeMap = new Map();
+let layerTree = [];
 let documentId = null;
 let zoom = 1;
 let panX = 0;
@@ -109,28 +110,59 @@ let spaceDown = false;
 let panGesture = null;
 let documentGeneration = 0;
 let openRequest = 0;
-const imageCache = new Map();
-const imageLoads = new Map();
-const pathCache = new WeakMap();
+let rendererReady = false;
+let needsRedraw = true;
+
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const wrap = document.getElementById('canvas-wrap');
-const tauri = window.__TAURI__;
-const isTauri = !!tauri?.core?.invoke;
+const statusEl = document.getElementById('renderer-status');
+const isTauri = !!window.__TAURI__?.core?.invoke;
 
+// ── IPC helpers ──
+async function invoke(cmd, args = {}) {
+  if (!isTauri) { console.warn(`Tauri not available for ${cmd}`); return null; }
+  try {
+    return await window.__TAURI__.core.invoke(cmd, args);
+  } catch (e) {
+    console.error(`IPC ${cmd} failed:`, e);
+    throw e;
+  }
+}
+
+// ── Renderer init ──
+async function initRenderer() {
+  if (rendererReady) return;
+  if (!isTauri) {
+    statusEl.textContent = 'Browser mode — no renderer';
+    return;
+  }
+  statusEl.textContent = 'GPU: initializing...';
+  try {
+    const w = wrap.clientWidth || 800;
+    const h = wrap.clientHeight || 600;
+    await invoke('init_renderer', { width: w, height: h });
+    rendererReady = true;
+    statusEl.textContent = 'GPU: ready';
+    requestRedraw();
+  } catch (e) {
+    statusEl.textContent = 'GPU: error';
+    showError('Renderer init failed: ' + (e?.message || e));
+  }
+}
+
+// ── File loading ──
 async function openDialog() {
+  const tauri = window.__TAURI__;
   if (tauri?.dialog?.open) {
     try {
       const path = await tauri.dialog.open({ multiple: false, directory: false, filters: [{ name: 'Figma files', extensions: ['fig'] }] });
-      if (typeof path === 'string' && path.length > 0) await loadFromPath(path);
-      return;
-    } catch (error) {
-      console.error('Tauri dialog failed, using file input fallback:', error);
-    }
+      if (typeof path === 'string' && path.length > 0) { await loadFromPath(path); }
+    } catch (e) { console.error('Dialog failed:', e); }
+    return;
   }
   const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.fig,application/zip';
+  input.type = 'file'; input.accept = '.fig,application/zip';
   input.onchange = async () => { if (input.files?.[0]) await loadFromFile(input.files[0]); };
   input.click();
 }
@@ -139,16 +171,13 @@ async function loadFromPath(path) {
   const request = ++openRequest;
   showLoading('Opening file...');
   try {
-    const nextDoc = await tauri.core.invoke('open_file', { path });
-    if (request !== openRequest) {
-      releaseDocument(nextDoc?.document_id);
-      return;
-    }
-    onDocLoaded(nextDoc, path.split(/[/\\]/).pop() || 'Untitled.fig');
-  } catch (error) {
+    if (!isTauri) { alert('Use the FIG Viewer application to open .fig files.'); return; }
+    const meta = await invoke('open_file', { path });
     if (request !== openRequest) return;
-    showError('Failed to open: ' + errorText(error));
-    console.error('open_file failed:', error);
+    onDocLoaded(meta, path.split(/[/\\]/).pop() || 'Untitled.fig');
+  } catch (e) {
+    if (request !== openRequest) return;
+    showError('Failed to open: ' + (e?.message || e));
   }
 }
 
@@ -157,623 +186,290 @@ async function loadFromFile(file) {
   const name = file.name || 'Untitled.fig';
   showLoading('Parsing file...');
   try {
-    if (!isTauri) {
-      alert('Browser-only mode cannot parse .fig files. Use the portable FIG Viewer application.');
-      return;
-    }
+    if (!isTauri) { alert('Use the FIG Viewer application to open .fig files.'); return; }
     const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
-    const nextDoc = await tauri.core.invoke('open_file_bytes', { data: bytes, name });
-    if (request !== openRequest) {
-      releaseDocument(nextDoc?.document_id);
-      return;
-    }
-    onDocLoaded(nextDoc, name);
-  } catch (error) {
+    const meta = await invoke('open_file_bytes', { data: bytes, name });
     if (request !== openRequest) return;
-    showError('Failed to parse: ' + errorText(error));
-    console.error('open_file_bytes failed:', error);
+    onDocLoaded(meta, name);
+  } catch (e) {
+    if (request !== openRequest) return;
+    showError('Failed to parse: ' + (e?.message || e));
   }
 }
 
-function onDocLoaded(nextDoc, name) {
-  if (!nextDoc || !Array.isArray(nextDoc.pages) || nextDoc.pages.length === 0) {
-    releaseDocument(nextDoc?.document_id);
-    showError('No pages found in document');
+async function onDocLoaded(meta, tabName) {
+  if (!meta || !Array.isArray(meta.pages) || meta.pages.length === 0) {
+    showError('No pages found');
     return;
   }
-  const previousDocumentId = documentId;
-  doc = nextDoc;
-  activePage = doc.pages[0];
+  docMeta = meta;
+  activePageIndex = 0;
   selection = null;
-  documentId = doc.document_id || null;
-  if (previousDocumentId && previousDocumentId !== documentId) releaseDocument(previousDocumentId);
-  nodeMap = new Map((doc.nodes || []).map(node => [nid(node), node]));
+  documentId = meta.document_id;
   documentGeneration += 1;
-  clearImageResources();
-  renderAll();
-  fitToInitialFrame();
-  document.getElementById('tab-bar').innerHTML = `<div class="tab active"><span class="name">${esc(name)}</span><span class="close" data-close-tab>&times;</span></div>`;
+
+  // Fetch layer tree for the first page
+  await refreshLayerTree();
+  requestRedraw();
+
+  document.getElementById('tab-bar').innerHTML =
+    `<div class="tab active"><span class="name">${esc(tabName || meta.file_name)}</span><span class="close" data-close-tab>&times;</span></div>`;
 }
 
-function showLoading(message) {
-  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:var(--ac)">${esc(message)}</div>`;
-}
-
-function showError(message) {
-  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:var(--danger)">${esc(message)} <span class="close" data-close-tab>&times;</span></div>`;
-}
-
-function closeTab() {
-  const closingDocumentId = documentId;
-  openRequest += 1;
-  documentGeneration += 1;
-  clearImageResources();
-  doc = null;
-  activePage = null;
-  selection = null;
-  documentId = null;
-  nodeMap.clear();
-  releaseDocument(closingDocumentId);
+async function refreshLayerTree() {
+  if (!documentId) return;
+  try {
+    layerTree = await invoke('get_layer_tree', { document_id: documentId, page_index: activePageIndex }) || [];
+  } catch (e) { layerTree = []; }
   renderAll();
 }
 
-function releaseDocument(id) {
-  if (!isTauri || !id) return;
-  void tauri.core.invoke('close_file', { document_id: id }).catch(error => console.warn('Document cleanup failed:', error));
+// ── Rendering ──
+async function requestRedraw() {
+  needsRedraw = true;
+  doRender();
 }
 
-function clearImageResources() {
-  for (const entry of imageCache.values()) {
-    if (entry.url) URL.revokeObjectURL(entry.url);
+async function doRender() {
+  if (!rendererReady || !documentId || !needsRedraw) return;
+  needsRedraw = false;
+
+  try {
+    // Resize viewport if needed
+    const w = wrap.clientWidth || 1;
+    const h = wrap.clientHeight || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    await invoke('resize_viewport', { width: w, height: h, dpr });
+
+    // Render frame
+    const pixels = await invoke('render_frame');
+    if (!pixels || !(pixels instanceof Uint8Array || Array.isArray(pixels))) return;
+
+    // Display pixels in canvas
+    const pixelArr = new Uint8Array(pixels);
+    const imgW = Math.floor(w * dpr);
+    const imgH = Math.floor(h * dpr);
+    canvas.width = imgW;
+    canvas.height = imgH;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Create ImageData and put it
+    const clamped = new Uint8ClampedArray(pixelArr.buffer, pixelArr.byteOffset, pixelArr.byteLength);
+    const imageData = new ImageData(clamped, imgW, imgH);
+    ctx.putImageData(imageData, 0, 0);
+
+    // Update zoom display from camera state
+    try {
+      const cam = await invoke('get_camera_state');
+      if (cam) {
+        zoom = cam.zoom || 1;
+        panX = cam.pan_x || 0;
+        panY = cam.pan_y || 0;
+        document.getElementById('zoom-lvl').textContent = `${Math.round(zoom * 100)}%`;
+      }
+    } catch (_) {}
+  } catch (e) {
+    console.warn('Render failed:', e);
   }
-  imageCache.clear();
-  imageLoads.clear();
 }
 
-function errorText(error) { return error instanceof Error ? error.message : String(error); }
-
+// ── UI rendering (no Canvas 2D scene code) ──
 function renderAll() {
-  if (!doc) {
+  if (!docMeta) {
     document.getElementById('pages').innerHTML = '';
     document.getElementById('layers').innerHTML = '';
     document.getElementById('props').innerHTML = '';
-    renderCanvas();
-    document.getElementById('tab-bar').innerHTML = '<div class="tab-placeholder empty" style="padding:8px;justify-content:flex-start;flex:1">Choose Open, press Ctrl+O, or drop a .fig file here</div>';
+    clearCanvas();
+    document.getElementById('tab-bar').innerHTML =
+      '<div class="empty" style="padding:8px;justify-content:flex-start;flex:1">Choose Open, press Ctrl+O, or drop a .fig file here</div>';
     return;
   }
   renderPages();
   renderLayers();
-  renderCanvas();
   renderProps();
 }
 
+function clearCanvas() {
+  const w = wrap.clientWidth || 1, h = wrap.clientHeight || 1;
+  canvas.width = w; canvas.height = h;
+  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+  ctx.fillStyle = '#e5e5e5';
+  ctx.fillRect(0, 0, w, h);
+}
+
 function renderPages() {
-  const element = document.getElementById('pages');
-  element.innerHTML = doc.pages.map(page => `<div class="page${sameId(page.id, activePage?.id) ? ' active' : ''}" data-page="${nodeId(page.id)}">${esc(page.name)}</div>`).join('');
-  element.querySelectorAll('.page').forEach(page => page.onclick = () => {
-    activePage = doc.pages.find(item => nodeId(item.id) === page.dataset.page) || activePage;
+  const el = document.getElementById('pages');
+  el.innerHTML = (docMeta.pages || []).map((page, i) =>
+    `<div class="page${i === activePageIndex ? ' active' : ''}" data-page="${i}">${esc(page.name)}</div>`).join('');
+  el.querySelectorAll('.page').forEach(p => p.onclick = async () => {
+    activePageIndex = parseInt(p.dataset.page);
     selection = null;
-    renderAll();
-    fitToInitialFrame();
+    await invoke('set_page', { page_index: activePageIndex }).catch(() => {});
+    await refreshLayerTree();
+    requestRedraw();
   });
 }
 
 function renderLayers() {
-  const element = document.getElementById('layers');
-  if (!activePage) { element.innerHTML = ''; return; }
-  const ids = doc.children_map[nodeId(activePage.id)] || [];
-  element.innerHTML = ids.map(id => layerItem(id, 0)).join('');
-  element.querySelectorAll('.layer').forEach(layer => layer.onclick = () => {
-    selection = nodeMap.get(layer.dataset.id) || null;
+  const el = document.getElementById('layers');
+  el.innerHTML = layerTree.map(node => layerItem(node, 0)).join('');
+  el.querySelectorAll('.layer').forEach(ly => ly.onclick = async () => {
+    const id = ly.dataset.id;
+    selection = id || null;
+    await invoke('select_node', { node_id: selection }).catch(() => {});
+    await invoke('fit_node', { node_id: selection }).catch(() => {});
     renderAll();
-    centerOnNode(layer.dataset.id);
+    requestRedraw();
   });
 }
 
-function layerItem(id, depth) {
-  const node = nodeMap.get(id);
-  if (!node || node.phase === 'Removed') return '';
-  const children = doc.children_map[id] || [];
-  const selected = selection && nid(selection) === id;
+function layerItem(node, depth) {
+  if (!node) return '';
   const icons = { Frame: '[ ]', Group: '[ ]', Text: 'T', Rectangle: '[ ]', RoundedRectangle: '[ ]', Ellipse: 'O', Line: '/', Vector: '*', Component: '<>', Instance: '<>', Section: '#', BooleanGroup: '+', Canvas: 'P' };
-  return `<div class="layer${selected ? ' selected' : ''}" data-id="${id}" style="padding-left:${10 + depth * 14}px"><span class="icon">${icons[node.node_type] || '*'}</span><span class="name">${esc(node.name)}</span></div>${children.map(child => layerItem(child, depth + 1)).join('')}`;
+  const selected = selection === node.id;
+  return `<div class="layer${selected ? ' selected' : ''}" data-id="${node.id}" style="padding-left:${10 + depth * 14}px"><span class="icon">${icons[node.node_type] || '*'}</span><span class="name">${esc(node.name)}</span></div>${(node.children || []).map(c => layerItem(c, depth + 1)).join('')}`;
 }
 
-function renderCanvas() {
-  const width = Math.max(1, Math.floor(wrap.clientWidth));
-  const height = Math.max(1, Math.floor(wrap.clientHeight));
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.floor(width * dpr);
-  canvas.height = Math.floor(height * dpr);
-  canvas.style.width = width + 'px';
-  canvas.style.height = height + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = '#e5e5e5';
-  ctx.fillRect(0, 0, width, height);
-  document.getElementById('zoom-lvl').textContent = `${Math.round(zoom * 100)}%`;
-  if (!doc || !activePage) return;
-  ctx.save();
-  ctx.translate(panX, panY);
-  ctx.scale(zoom, zoom);
-  for (const id of doc.children_map[nodeId(activePage.id)] || []) drawNode(id);
-  ctx.restore();
+async function renderProps() {
+  const el = document.getElementById('props');
+  if (!selection || !documentId) { el.innerHTML = ''; return; }
+  try {
+    const props = await invoke('get_node_properties', { document_id: documentId, node_id: selection });
+    if (!props) { el.innerHTML = ''; return; }
+    let html = `<div class="pg"><div class="pl">Name</div><div class="pv">${esc(props.name)}</div></div>`;
+    html += `<div class="pg"><div class="pl">Type</div><div class="pv">${props.node_type}</div></div>`;
+    if (props.width != null) html += `<div class="pg"><div class="pl">Size</div><div class="pv">W:${f(props.width)} H:${f(props.height)}</div></div>`;
+    if (props.x != null) html += `<div class="pg"><div class="pl">Position</div><div class="pv">X:${f(props.x)} Y:${f(props.y)}</div></div>`;
+    html += `<div class="pg"><div class="pl">Opacity</div><div class="pv">${Math.round((props.opacity || 0) * 100)}%</div></div>`;
+    if (props.fill_count > 0) html += `<div class="pg"><div class="pl">Fills</div><div class="pv">${props.fill_count} paint(s)</div></div>`;
+    if (props.stroke_weight > 0) html += `<div class="pg"><div class="pl">Stroke</div><div class="pv">${f(props.stroke_weight)}px</div></div>`;
+    if (props.corner_radius) html += `<div class="pg"><div class="pl">Corner</div><div class="pv">${f(props.corner_radius)}</div></div>`;
+    if (props.font_size) html += `<div class="pg"><div class="pl">Font</div><div class="pv">${esc(props.font_family || '-')} ${props.font_weight} ${f(props.font_size)}px</div></div>`;
+    el.innerHTML = html;
+  } catch (_) { el.innerHTML = ''; }
 }
 
-function drawNode(id) {
-  const node = nodeMap.get(id);
-  if (!node || !node.visible || node.phase === 'Removed') return;
-  const width = node.size?.x || 0;
-  const height = node.size?.y || 0;
-  ctx.save();
-  if (node.transform) ctx.transform(node.transform.m00, node.transform.m10, node.transform.m01, node.transform.m11, node.transform.m02, node.transform.m12);
-  ctx.globalAlpha *= Number.isFinite(node.opacity) ? node.opacity : 1;
-  ctx.globalCompositeOperation = compositeOperation(node.blend_mode);
-
-  ctx.save();
-  applyShadow(node.effects);
-  drawNodeContent(node, width, height);
-  ctx.restore();
-
-  const container = node.node_type === 'Frame' || node.node_type === 'Component' || node.node_type === 'Instance' || node.node_type === 'Section';
-  if (container && node.clips_content) {
-    ctx.save();
-    clipNode(node, width, height);
-    for (const child of doc.children_map[id] || []) drawNode(child);
-    ctx.restore();
-  } else {
-    for (const child of doc.children_map[id] || []) drawNode(child);
-  }
-
-  if (selection && nid(selection) === id) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = '#18a0fb';
-    ctx.lineWidth = Math.max(1, 2 / zoom);
-    ctx.setLineDash([4 / zoom, 3 / zoom]);
-    const path = fallbackPath(node, width, height);
-    if (path) ctx.stroke(path);
-    ctx.restore();
-  }
-  ctx.restore();
+// ── Camera control ──
+async function zoomAt(screenX, screenY, newZoom) {
+  await invoke('zoom_at', { screen_x: screenX, screen_y: screenY, zoom: newZoom }).catch(() => {});
+  requestRedraw();
 }
 
-function drawNodeContent(node, width, height) {
-  if (node.node_type === 'Text' && node.text_data) {
-    drawText(node, width, height);
-  } else {
-    const fillPaints = (node.fill_paints?.length ? node.fill_paints : node.background_paints) || [];
-    const fillGeometry = geometryForNode(node, width, height);
-    if (fillGeometry?.paths.length) drawPaintedPaths(fillGeometry.paths, fillPaints, fillGeometry.sx, fillGeometry.sy, width, height, false);
-    else if (width > 0 && height > 0 && fillPaints.length) {
-      const path = fallbackPath(node, width, height);
-      const paint = fillPaints.find(item => item.visible !== false);
-      if (path && paint) drawPaintOnPath(path, paint, width, height, 'nonzero');
-    }
-    const strokeGeometry = node.stroke_geometry?.length ? { paths: node.stroke_geometry, sx: 1, sy: 1 } : (node.vector_geometry?.paths?.length ? { paths: node.vector_geometry.paths, sx: vectorScale(node, width, height).x, sy: vectorScale(node, width, height).y } : null);
-    if (strokeGeometry?.paths.length && node.stroke_paints?.length) drawPaintedPaths(strokeGeometry.paths, node.stroke_paints, strokeGeometry.sx, strokeGeometry.sy, width, height, true);
-    else if (node.stroke_weight > 0 && node.stroke_paints?.length) drawFallbackStroke(node, width, height);
-  }
+async function setZoomCentered(newZoom) {
+  await invoke('set_zoom', { zoom: newZoom }).catch(() => {});
+  requestRedraw();
 }
 
-function geometryForNode(node, width, height) {
-  if (node.fill_geometry?.length) return { paths: node.fill_geometry, sx: 1, sy: 1 };
-  if (node.vector_geometry?.paths?.length) {
-    const scale = vectorScale(node, width, height);
-    return { paths: node.vector_geometry.paths, sx: scale.x, sy: scale.y };
-  }
-  return null;
+async function fitPage() {
+  await invoke('fit_page', { padding: 48 }).catch(() => {});
+  requestRedraw();
 }
 
-function vectorScale(node, width, height) {
-  const normalized = node.vector_geometry?.normalized_size;
-  return { x: normalized?.x ? width / normalized.x : 1, y: normalized?.y ? height / normalized.y : 1 };
-}
-
-function drawPaintedPaths(paths, paints, sx, sy, width, height, stroke) {
-  for (const path of paths) {
-    const paint = paints[path.style_id] || paints[0];
-    if (!paint || paint.visible === false) continue;
-    const shape = pathFromCommands(path.commands, sx, sy);
-    if (shape) drawPaintOnPath(shape, paint, width, height, path.winding_rule === 'EvenOdd' ? 'evenodd' : 'nonzero');
-  }
-}
-
-function drawPaintOnPath(path, paint, width, height, rule) {
-  if (!paint || paint.visible === false) return;
-  const alpha = Number.isFinite(paint.opacity) ? paint.opacity : 1;
-  ctx.save();
-  ctx.globalAlpha *= alpha;
-  if (paint.paint_type === 'Image' && paint.image_hash) {
-    const image = ensureImage(paint.image_hash);
-    ctx.save();
-    ctx.clip(path, rule);
-    if (image) ctx.drawImage(image, 0, 0, width, height);
-    ctx.restore();
-  } else {
-    const fill = paintStyle(paint, width, height);
-    if (fill) {
-      ctx.fillStyle = fill;
-      ctx.fill(path, rule);
-    }
-  }
-  ctx.restore();
-}
-
-function drawFallbackStroke(node, width, height) {
-  const paint = node.stroke_paints[0];
-  const path = fallbackPath(node, width, height);
-  if (!path || !paint) return;
-  ctx.save();
-  ctx.strokeStyle = paint.color ? rgba(paint.color, paint.opacity) : '#000';
-  ctx.lineWidth = node.stroke_weight || 1;
-  ctx.stroke(path);
-  ctx.restore();
-}
-
-function drawText(node, width, height) {
-  const data = node.text_data;
-  const paint = data.fills?.find(item => item.visible !== false) || node.fill_paints?.find(item => item.visible !== false);
-  const color = paint?.color || { r: 0, g: 0, b: 0, a: 1 };
-  const size = data.font_size || 16;
-  const family = data.font_family || 'system-ui, sans-serif';
-  const weight = data.font_weight || 400;
-  const lineHeight = data.line_height || size * 1.2;
-  ctx.save();
-  ctx.fillStyle = rgba(color, paint?.opacity ?? color.a);
-  ctx.font = `${weight} ${size}px ${family}`;
-  ctx.textBaseline = 'top';
-  const lines = String(data.characters || '').split('\n');
-  lines.forEach((line, index) => ctx.fillText(line, 0, index * lineHeight, width || undefined));
-  ctx.restore();
-}
-
-function clipNode(node, width, height) {
-  const path = fallbackPath(node, width, height);
-  if (path) ctx.clip(path);
-}
-
-function fallbackPath(node, width, height) {
-  if (width <= 0 || height < 0) return null;
-  const path = new Path2D();
-  if (node.node_type === 'Ellipse') {
-    path.ellipse(width / 2, height / 2, Math.abs(width / 2), Math.abs(height / 2), 0, 0, Math.PI * 2);
-    return path;
-  }
-  if (node.node_type === 'Line') {
-    path.moveTo(0, 0); path.lineTo(width, height); return path;
-  }
-  const radii = node.corner_radii || (node.corner_radius ? { top_left: node.corner_radius, top_right: node.corner_radius, bottom_right: node.corner_radius, bottom_left: node.corner_radius } : null);
-  if (!radii || (!radii.top_left && !radii.top_right && !radii.bottom_right && !radii.bottom_left)) {
-    path.rect(0, 0, width, height);
-    return path;
-  }
-  const maxRadius = Math.min(Math.abs(width), Math.abs(height)) / 2;
-  const tl = Math.min(Math.max(radii.top_left, 0), maxRadius);
-  const tr = Math.min(Math.max(radii.top_right, 0), maxRadius);
-  const br = Math.min(Math.max(radii.bottom_right, 0), maxRadius);
-  const bl = Math.min(Math.max(radii.bottom_left, 0), maxRadius);
-  path.moveTo(tl, 0); path.lineTo(width - tr, 0); path.quadraticCurveTo(width, 0, width, tr);
-  path.lineTo(width, height - br); path.quadraticCurveTo(width, height, width - br, height);
-  path.lineTo(bl, height); path.quadraticCurveTo(0, height, 0, height - bl);
-  path.lineTo(0, tl); path.quadraticCurveTo(0, 0, tl, 0); path.closePath();
-  return path;
-}
-
-function pathFromCommands(commands, sx, sy) {
-  if (!Array.isArray(commands) || !commands.length) return null;
-  const cached = pathCache.get(commands);
-  const key = `${sx}:${sy}`;
-  if (cached?.key === key) return cached.path;
-  const path = new Path2D();
-  for (const command of commands) {
-    if (command.type === 'moveTo') path.moveTo(command.x * sx, command.y * sy);
-    else if (command.type === 'lineTo') path.lineTo(command.x * sx, command.y * sy);
-    else if (command.type === 'cubicTo') path.bezierCurveTo(command.x1 * sx, command.y1 * sy, command.x2 * sx, command.y2 * sy, command.x * sx, command.y * sy);
-    else if (command.type === 'close') path.closePath();
-  }
-  pathCache.set(commands, { key, path });
-  return path;
-}
-
-function paintStyle(paint, width, height) {
-  if (paint.paint_type === 'Solid' && paint.color) return rgba(paint.color);
-  if (!paint.stops || paint.stops.length < 2) return paint.color ? rgba(paint.color) : null;
-  const points = gradientPoints(paint.transform, paint.paint_type, width, height);
-  let gradient;
-  if (paint.paint_type === 'GradientRadial') gradient = ctx.createRadialGradient(points.start.x, points.start.y, 0, points.end.x, points.end.y, Math.max(width, height));
-  else gradient = ctx.createLinearGradient(points.start.x, points.start.y, points.end.x, points.end.y);
-  for (const stop of paint.stops) gradient.addColorStop(Math.max(0, Math.min(1, stop.position)), rgba(stop.color, stop.color.a));
-  return gradient;
-}
-
-function gradientPoints(transform, type, width, height) {
-  const canonical = type === 'GradientRadial' ? [{ x: .5, y: .5 }, { x: 1, y: .5 }] : [{ x: 0, y: .5 }, { x: 1, y: .5 }];
-  if (!transform) return { start: { x: canonical[0].x * width, y: canonical[0].y * height }, end: { x: canonical[1].x * width, y: canonical[1].y * height } };
-  const inverse = invertMatrix(transform);
-  const start = applyMatrix(inverse, canonical[0]);
-  const end = applyMatrix(inverse, canonical[1]);
-  return { start: { x: start.x * width, y: start.y * height }, end: { x: end.x * width, y: end.y * height } };
-}
-
-function invertMatrix(matrix) {
-  const determinant = matrix.m00 * matrix.m11 - matrix.m01 * matrix.m10;
-  if (!determinant) return { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
-  return {
-    m00: matrix.m11 / determinant,
-    m01: -matrix.m01 / determinant,
-    m02: (matrix.m01 * matrix.m12 - matrix.m11 * matrix.m02) / determinant,
-    m10: -matrix.m10 / determinant,
-    m11: matrix.m00 / determinant,
-    m12: (matrix.m10 * matrix.m02 - matrix.m00 * matrix.m12) / determinant
-  };
-}
-
-function applyMatrix(matrix, point) { return { x: matrix.m00 * point.x + matrix.m01 * point.y + matrix.m02, y: matrix.m10 * point.x + matrix.m11 * point.y + matrix.m12 }; }
-
-function applyShadow(effects) {
-  const effect = (effects || []).find(item => item.visible && (item.effect_type === 'DropShadow' || item.effect_type === 'InnerShadow'));
-  if (!effect) return;
-  ctx.shadowColor = effect.color ? rgba(effect.color) : 'rgba(0,0,0,.3)';
-  ctx.shadowBlur = effect.radius || 0;
-  ctx.shadowOffsetX = effect.offset?.x || 0;
-  ctx.shadowOffsetY = effect.offset?.y || 0;
-}
-
-function compositeOperation(mode) {
-  const values = { MULTIPLY: 'multiply', SCREEN: 'screen', OVERLAY: 'overlay', DARKEN: 'darken', LIGHTEN: 'lighten', COLOR_DODGE: 'color-dodge', COLOR_BURN: 'color-burn', HARD_LIGHT: 'hard-light', SOFT_LIGHT: 'soft-light', DIFFERENCE: 'difference', EXCLUSION: 'exclusion', HUE: 'hue', SATURATION: 'saturation', COLOR: 'color', LUMINOSITY: 'luminosity' };
-  return values[mode] || 'source-over';
-}
-
-function ensureImage(hash) {
-  if (!isTauri || !documentId || !hash) return null;
-  const cached = imageCache.get(hash);
-  if (cached) return cached.image;
-  if (!imageLoads.has(hash)) {
-    const generation = documentGeneration;
-    const sourceDocumentId = documentId;
-    let load;
-    load = tauri.core.invoke('get_image', { document_id: sourceDocumentId, hash }).then(bytes => new Promise((resolve, reject) => {
-      const image = new Image();
-      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)]));
-      image.onload = () => {
-        const current = generation === documentGeneration && sourceDocumentId === documentId && !!doc;
-        if (!current) {
-          URL.revokeObjectURL(url);
-          resolve(null);
-          return;
-        }
-        imageCache.set(hash, { image, url });
-        if (imageLoads.get(hash) === load) imageLoads.delete(hash);
-        renderCanvas();
-        resolve(image);
-      };
-      image.onerror = () => {
-        URL.revokeObjectURL(url);
-        if (imageLoads.get(hash) === load) imageLoads.delete(hash);
-        reject(new Error('Image decode failed'));
-      };
-      image.src = url;
-    })).catch(error => {
-      if (imageLoads.get(hash) === load) imageLoads.delete(hash);
-      console.warn('Image fill unavailable:', hash, error);
-    });
-    imageLoads.set(hash, load);
-  }
-  return null;
-}
-
-function fitToInitialFrame() {
-  if (!doc || !activePage) return;
-  const first = (doc.children_map[nodeId(activePage.id)] || []).find(id => {
-    const node = nodeMap.get(id); return node && node.visible && node.phase !== 'Removed' && node.size;
-  });
-  if (first) fitToNode(first); else fitToPage();
-}
-
-function fitToPage() { if (doc && activePage) fitToNodes(doc.children_map[nodeId(activePage.id)] || []); }
-function fitToSelection() { if (selection) fitToNode(nid(selection)); else fitToInitialFrame(); }
-
-function fitToNode(id) {
-  const node = nodeMap.get(id);
-  if (!node) return;
-  const parent = node.parent_id ? worldMatrix(nodeId(node.parent_id)) : null;
-  const bounds = nodeBounds(id, parent);
-  if (bounds) fitToBounds(bounds);
-}
-
-function fitToNodes(ids) {
-  const bounds = ids.reduce((result, id) => mergeBounds(result, nodeBounds(id, null)), null);
-  if (bounds) fitToBounds(bounds);
-}
-
-function fitToBounds(bounds) {
-  const width = wrap.clientWidth;
-  const height = wrap.clientHeight;
-  if (!width || !height) { requestAnimationFrame(() => fitToBounds(bounds)); return; }
-  const contentWidth = Math.max(bounds.width, 1);
-  const contentHeight = Math.max(bounds.height, 1);
-  zoom = clamp(Math.min((width - 64) / contentWidth, (height - 64) / contentHeight, 4), .02, 4);
-  panX = (width - contentWidth * zoom) / 2 - bounds.x * zoom;
-  panY = (height - contentHeight * zoom) / 2 - bounds.y * zoom;
-  renderCanvas();
-}
-
-function centerOnNode(id) {
-  const node = nodeMap.get(id);
-  if (!node) return;
-  const parent = node.parent_id ? worldMatrix(nodeId(node.parent_id)) : null;
-  const bounds = nodeBounds(id, parent);
-  if (bounds) centerOnBounds(bounds);
-}
-
-function centerOnBounds(bounds) {
-  if (!wrap.clientWidth || !wrap.clientHeight) { requestAnimationFrame(() => centerOnBounds(bounds)); return; }
-  panX = wrap.clientWidth / 2 - (bounds.x + bounds.width / 2) * zoom;
-  panY = wrap.clientHeight / 2 - (bounds.y + bounds.height / 2) * zoom;
-  renderCanvas();
-}
-
-function setZoomCentered(nextZoom) {
-  const focus = focusPoint();
-  zoom = clamp(nextZoom, .02, 16);
-  panX = wrap.clientWidth / 2 - focus.x * zoom;
-  panY = wrap.clientHeight / 2 - focus.y * zoom;
-  renderCanvas();
-}
-
-function zoomAt(screenX, screenY, nextZoom) {
-  const worldX = (screenX - panX) / zoom;
-  const worldY = (screenY - panY) / zoom;
-  zoom = clamp(nextZoom, .02, 16);
-  panX = screenX - worldX * zoom;
-  panY = screenY - worldY * zoom;
-  renderCanvas();
-}
-
-function focusPoint() {
-  const bounds = selection ? nodeBounds(nid(selection), selection.parent_id ? worldMatrix(nodeId(selection.parent_id)) : null) : null;
-  if (bounds) return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
-  const first = doc && activePage ? (doc.children_map[nodeId(activePage.id)] || [])[0] : null;
-  const firstBounds = first ? nodeBounds(first, null) : null;
-  return firstBounds ? { x: firstBounds.x + firstBounds.width / 2, y: firstBounds.y + firstBounds.height / 2 } : { x: 0, y: 0 };
-}
-
-function worldMatrix(id, seen = new Set()) {
-  if (seen.has(id)) return null;
-  seen.add(id);
-  const node = nodeMap.get(id);
-  if (!node) return null;
-  return multiplyMatrix(node.parent_id ? worldMatrix(nodeId(node.parent_id), seen) : null, node.transform);
-}
-
-function nodeBounds(id, parentMatrix) {
-  const node = nodeMap.get(id);
-  if (!node || !node.visible || node.phase === 'Removed') return null;
-  const matrix = multiplyMatrix(parentMatrix, node.transform);
-  const size = node.size || { x: 0, y: 0 };
-  let bounds = rectBounds(matrix, size.x, size.y);
-  for (const child of doc.children_map[id] || []) bounds = mergeBounds(bounds, nodeBounds(child, matrix));
-  return bounds;
-}
-
-function multiplyMatrix(parent, local) {
-  if (!parent) return local || { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
-  if (!local) return parent;
-  return { m00: parent.m00 * local.m00 + parent.m01 * local.m10, m01: parent.m00 * local.m01 + parent.m01 * local.m11, m02: parent.m00 * local.m02 + parent.m01 * local.m12 + parent.m02, m10: parent.m10 * local.m00 + parent.m11 * local.m10, m11: parent.m10 * local.m01 + parent.m11 * local.m11, m12: parent.m10 * local.m02 + parent.m11 * local.m12 + parent.m12 };
-}
-
-function rectBounds(matrix, width, height) {
-  const points = [[0, 0], [width, 0], [0, height], [width, height]].map(([x, y]) => applyMatrix(matrix, { x, y }));
-  const xs = points.map(point => point.x); const ys = points.map(point => point.y);
-  const x = Math.min(...xs); const y = Math.min(...ys);
-  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
-}
-
-function mergeBounds(a, b) {
-  if (!a) return b; if (!b) return a;
-  const x = Math.min(a.x, b.x); const y = Math.min(a.y, b.y);
-  return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
-}
-
-function renderProps() {
-  const element = document.getElementById('props');
-  if (!selection) { element.innerHTML = ''; return; }
-  const node = selection;
-  let html = `<div class="pg"><div class="pl">Name</div><div class="pv">${esc(node.name)}</div></div>`;
-  html += `<div class="pg"><div class="pl">Type</div><div class="pv">${node.node_type}</div></div>`;
-  if (node.size) html += `<div class="pg"><div class="pl">Size</div><div class="pv">W:${f(node.size.x)} H:${f(node.size.y)}</div></div>`;
-  if (node.transform) html += `<div class="pg"><div class="pl">Position</div><div class="pv">X:${f(node.transform.m02)} Y:${f(node.transform.m12)}</div></div>`;
-  html += `<div class="pg"><div class="pl">Opacity</div><div class="pv">${Math.round((node.opacity || 0) * 100)}%</div></div>`;
-  if (node.fill_geometry?.length || node.vector_geometry?.paths?.length) html += `<div class="pg"><div class="pl">Geometry</div><div class="pv">${(node.fill_geometry?.length || node.vector_geometry?.paths?.length || 0)} baked path(s)</div></div>`;
-  for (const paint of node.fill_paints || []) if (paint.paint_type === 'Solid' && paint.color) html += `<div class="pg"><div class="pl">Fill</div><div class="pv"><span class="swatch" style="background:${rgba(paint.color)}"></span>${rgba(paint.color)}</div></div>`;
-  if (node.stroke_weight > 0) html += `<div class="pg"><div class="pl">Stroke</div><div class="pv">${f(node.stroke_weight)}px</div></div>`;
-  if (node.corner_radius) html += `<div class="pg"><div class="pl">Corner</div><div class="pv">${f(node.corner_radius)}</div></div>`;
-  if (node.text_data) html += `<div class="pg"><div class="pl">Font</div><div class="pv">${esc(node.text_data.font_family || '-')} ${node.text_data.font_weight} ${f(node.text_data.font_size)}px</div></div>`;
-  element.innerHTML = html;
-}
-
-function nodeId(value) { return typeof value === 'string' ? value : value && Number.isFinite(value.session_id) && Number.isFinite(value.local_id) ? `${value.session_id}:${value.local_id}` : ''; }
-function nid(node) { return nodeId(node.guid); }
-function sameId(a, b) { return !!a && !!b && nodeId(a) === nodeId(b); }
-function rgba(color, alpha) { return `rgba(${Math.round(color.r * 255)},${Math.round(color.g * 255)},${Math.round(color.b * 255)},${alpha ?? color.a ?? 1})`; }
-function esc(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function f(value) { return Math.round((Number(value) || 0) * 100) / 100; }
-function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
-
+// ── UI helpers ──
+function showLoading(msg) { document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:var(--ac)">${esc(msg)}</div>`; }
+function showError(msg) { document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:var(--danger)">${esc(msg)} <span class="close" data-close-tab>&times;</span></div>`; }
+function closeTab() { docMeta = null; documentId = null; layerTree = []; selection = null; openRequest++; needsRedraw = true; renderAll(); clearCanvas(); }
+function esc(v) { return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function f(v) { return Math.round((Number(v) || 0) * 100) / 100; }
 function openGuide() { document.getElementById('guide-backdrop').classList.add('open'); document.getElementById('guide-close').focus(); }
 function closeGuide() { document.getElementById('guide-backdrop').classList.remove('open'); }
 
+// ── Event bindings ──
 document.getElementById('open-file').onclick = openDialog;
-document.getElementById('fit').onclick = fitToPage;
-document.getElementById('fit-selection').onclick = fitToSelection;
-document.getElementById('zin').onclick = () => zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, zoom * 1.25);
-document.getElementById('zout').onclick = () => zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, zoom * .8);
+document.getElementById('fit').onclick = fitPage;
+document.getElementById('zin').onclick = () => zoomAt(wrap.clientWidth/2, wrap.clientHeight/2, zoom * 1.25);
+document.getElementById('zout').onclick = () => zoomAt(wrap.clientWidth/2, wrap.clientHeight/2, zoom * 0.8);
 document.getElementById('z100').onclick = () => setZoomCentered(1);
 document.getElementById('guide-button').onclick = openGuide;
 document.getElementById('guide-close').onclick = closeGuide;
-document.getElementById('guide-backdrop').onclick = event => { if (event.target.id === 'guide-backdrop') closeGuide(); };
-document.getElementById('tab-bar').addEventListener('click', event => { if (event.target.closest('[data-close-tab]')) closeTab(); });
+document.getElementById('guide-backdrop').onclick = e => { if (e.target.id === 'guide-backdrop') closeGuide(); };
+document.getElementById('tab-bar').addEventListener('click', e => { if (e.target.closest('[data-close-tab]')) closeTab(); });
 
-wrap.addEventListener('wheel', event => {
-  event.preventDefault();
+// Wheel zoom
+wrap.addEventListener('wheel', async e => {
+  e.preventDefault();
   const rect = wrap.getBoundingClientRect();
-  const pointX = event.clientX - rect.left;
-  const pointY = event.clientY - rect.top;
-  zoomAt(pointX, pointY, zoom * (event.deltaY < 0 ? 1.12 : .89));
+  await zoomAt(e.clientX - rect.left, e.clientY - rect.top, zoom * (e.deltaY < 0 ? 1.12 : .89));
 }, { passive: false });
-wrap.addEventListener('contextmenu', event => event.preventDefault());
-wrap.addEventListener('pointerdown', event => {
-  if (event.button === 1 || event.button === 2 || (event.button === 0 && spaceDown)) {
-    event.preventDefault();
-    panGesture = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+
+wrap.addEventListener('contextmenu', e => e.preventDefault());
+
+// Panning
+wrap.addEventListener('pointerdown', e => {
+  if (e.button === 1 || e.button === 2 || (e.button === 0 && spaceDown)) {
+    e.preventDefault();
+    panGesture = { pointerId: e.pointerId, x: e.clientX, y: e.clientY };
     wrap.classList.add('panning');
-    wrap.setPointerCapture(event.pointerId);
+    wrap.setPointerCapture(e.pointerId);
   }
 });
-wrap.addEventListener('pointermove', event => {
-  if (!panGesture || panGesture.pointerId !== event.pointerId) return;
-  panX += event.clientX - panGesture.x;
-  panY += event.clientY - panGesture.y;
-  panGesture.x = event.clientX;
-  panGesture.y = event.clientY;
-  renderCanvas();
+wrap.addEventListener('pointermove', async e => {
+  if (!panGesture || panGesture.pointerId !== e.pointerId) return;
+  const dx = e.clientX - panGesture.x;
+  const dy = e.clientY - panGesture.y;
+  panGesture.x = e.clientX; panGesture.y = e.clientY;
+  await invoke('pan_camera', { dx, dy }).catch(() => {});
+  requestRedraw();
 });
-function endPan(event) { if (panGesture?.pointerId === event.pointerId) { panGesture = null; wrap.classList.remove('panning'); } }
+const endPan = e => { if (panGesture?.pointerId === e.pointerId) { panGesture = null; wrap.classList.remove('panning'); } };
 wrap.addEventListener('pointerup', endPan);
 wrap.addEventListener('pointercancel', endPan);
 
-document.addEventListener('keydown', event => {
-  if (event.target && ['INPUT', 'TEXTAREA'].includes(event.target.tagName)) return;
-  if (event.code === 'Space') { spaceDown = true; event.preventDefault(); }
-  if (event.key === '?' || (event.shiftKey && event.key === '/')) { event.preventDefault(); openGuide(); return; }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') { event.preventDefault(); openDialog(); return; }
-  if (event.key === 'Escape') { if (document.getElementById('guide-backdrop').classList.contains('open')) closeGuide(); else { selection = null; renderAll(); } return; }
-  if (event.key === '+' || event.key === '=') { zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, zoom * 1.25); return; }
-  if (event.key === '-') { zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, zoom * .8); return; }
-  if (event.key === '0') { fitToPage(); return; }
-  if (event.key === '1') { setZoomCentered(1); return; }
-  if (event.key === '2') { fitToSelection(); }
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target && ['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  if (e.code === 'Space') { spaceDown = true; e.preventDefault(); }
+  if (e.key === '?' || (e.shiftKey && e.key === '/')) { e.preventDefault(); openGuide(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') { e.preventDefault(); openDialog(); return; }
+  if (e.key === 'Escape') {
+    if (document.getElementById('guide-backdrop').classList.contains('open')) closeGuide();
+    else { selection = null; invoke('select_node', { node_id: null }).catch(()=>{}); renderAll(); requestRedraw(); }
+    return;
+  }
+  if (e.key === '+' || e.key === '=') { zoomAt(wrap.clientWidth/2, wrap.clientHeight/2, zoom * 1.25); return; }
+  if (e.key === '-') { zoomAt(wrap.clientWidth/2, wrap.clientHeight/2, zoom * 0.8); return; }
+  if (e.key === '0') { fitPage(); return; }
+  if (e.key === '1') { setZoomCentered(1); return; }
 });
-document.addEventListener('keyup', event => { if (event.code === 'Space') { spaceDown = false; event.preventDefault(); } });
-new ResizeObserver(() => renderCanvas()).observe(wrap);
+document.addEventListener('keyup', e => { if (e.code === 'Space') { spaceDown = false; e.preventDefault(); } });
 
-if (tauri?.event?.listen) {
-  tauri.event.listen('tauri://drag-drop', event => {
-    const paths = event.payload?.paths;
-    const path = Array.isArray(paths) ? paths.find(item => typeof item === 'string' && item.toLowerCase().endsWith('.fig')) : null;
-    if (path) void loadFromPath(path); else if (Array.isArray(paths) && paths.length) showError('Drop a .fig file here');
-  }).catch(error => console.error('Tauri drag-drop listener failed:', error));
+// Resize
+new ResizeObserver(() => {
+  const w = wrap.clientWidth || 1, h = wrap.clientHeight || 1;
+  invoke('resize_viewport', { width: w, height: h, dpr: Math.min(window.devicePixelRatio||1, 2) }).catch(()=>{});
+  requestRedraw();
+}).observe(wrap);
+
+// Drag & drop
+if (window.__TAURI__?.event?.listen) {
+  window.__TAURI__.event.listen('tauri://drag-drop', async e => {
+    const paths = e.payload?.paths;
+    const path = Array.isArray(paths) ? paths.find(p => typeof p === 'string' && p.toLowerCase().endsWith('.fig')) : null;
+    if (path) await loadFromPath(path);
+    else if (Array.isArray(paths) && paths.length) showError('Drop a .fig file here');
+  }).catch(() => {});
 } else {
-  document.body.addEventListener('dragover', event => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; });
-  document.body.addEventListener('drop', async event => {
-    event.preventDefault();
-    const file = event.dataTransfer.files[0];
-    if (file && file.name.toLowerCase().endsWith('.fig')) await loadFromFile(file); else showError('Drop a .fig file here');
+  document.body.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  document.body.addEventListener('drop', async e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file?.name?.toLowerCase().endsWith('.fig')) await loadFromFile(file);
+    else showError('Drop a .fig file here');
   });
 }
 
-if (isTauri) tauri.core.invoke('take_startup_path').then(path => { if (typeof path === 'string' && path.length) return loadFromPath(path); }).catch(error => console.error('Startup file check failed:', error));
+// Startup
+if (isTauri) {
+  initRenderer().then(() => {
+    invoke('take_startup_path').then(async path => {
+      if (typeof path === 'string' && path.length) await loadFromPath(path);
+    }).catch(() => {});
+  });
+} else {
+  statusEl.textContent = 'Browser mode (no parser)';
+}
 </script>
 </body>
 </html>
