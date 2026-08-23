@@ -74,7 +74,9 @@ pub fn generate_rounded_rect(
 ) -> Vec<RenderVertex> {
     use lyon_path::math::point;
     use lyon_path::path::Builder;
-    use lyon_tessellation::{BuffersBuilder, FillOptions, FillTessellator, FillVertex, VertexBuffers};
+    use lyon_tessellation::{
+        BuffersBuilder, FillOptions, FillTessellator, FillVertex, VertexBuffers,
+    };
 
     if width <= 0.0 || height <= 0.0 {
         return Vec::new();
@@ -92,11 +94,20 @@ pub fn generate_rounded_rect(
     let mut segments: Vec<(f32, f32)> = Vec::new();
 
     // Helper: add a rounded corner as cubic bezier
-    fn add_arc_points(out: &mut Vec<(f32, f32)>, cx: f32, cy: f32, r: f32, start_angle: f32, end_angle: f32) {
+    fn add_arc_points(
+        out: &mut Vec<(f32, f32)>,
+        cx: f32,
+        cy: f32,
+        r: f32,
+        start_angle: f32,
+        end_angle: f32,
+    ) {
         use std::f32::consts::PI;
 
         let angle_range = end_angle - start_angle;
-        let segments_count = ((angle_range.abs() / (PI / 4.0)).ceil() as usize).max(1).min(4);
+        let segments_count = ((angle_range.abs() / (PI / 4.0)).ceil() as usize)
+            .max(1)
+            .min(4);
         let k = 4.0 / 3.0 * ((angle_range / segments_count as f32) / 4.0).tan();
 
         let mut a = start_angle;
@@ -126,7 +137,14 @@ pub fn generate_rounded_rect(
 
     // Top-right corner
     if tr > 0.0 {
-        add_arc_points(&mut segments, width - tr, tr, tr, -std::f32::consts::FRAC_PI_2, 0.0);
+        add_arc_points(
+            &mut segments,
+            width - tr,
+            tr,
+            tr,
+            -std::f32::consts::FRAC_PI_2,
+            0.0,
+        );
     } else {
         segments.push((width, 0.0));
     }
@@ -136,7 +154,14 @@ pub fn generate_rounded_rect(
 
     // Bottom-right corner
     if br > 0.0 {
-        add_arc_points(&mut segments, width - br, height - br, br, 0.0, std::f32::consts::FRAC_PI_2);
+        add_arc_points(
+            &mut segments,
+            width - br,
+            height - br,
+            br,
+            0.0,
+            std::f32::consts::FRAC_PI_2,
+        );
     } else {
         segments.push((width, height));
     }
@@ -146,7 +171,14 @@ pub fn generate_rounded_rect(
 
     // Bottom-left corner
     if bl > 0.0 {
-        add_arc_points(&mut segments, bl, height - bl, bl, std::f32::consts::FRAC_PI_2, std::f32::consts::PI);
+        add_arc_points(
+            &mut segments,
+            bl,
+            height - bl,
+            bl,
+            std::f32::consts::FRAC_PI_2,
+            std::f32::consts::PI,
+        );
     } else {
         segments.push((0.0, height));
     }
@@ -156,7 +188,14 @@ pub fn generate_rounded_rect(
 
     // Top-left corner
     if tl > 0.0 {
-        add_arc_points(&mut segments, tl, tl, tl, std::f32::consts::PI, 3.0 * std::f32::consts::FRAC_PI_2);
+        add_arc_points(
+            &mut segments,
+            tl,
+            tl,
+            tl,
+            std::f32::consts::PI,
+            3.0 * std::f32::consts::FRAC_PI_2,
+        );
     } else {
         segments.push((0.0, 0.0));
     }
@@ -182,8 +221,12 @@ pub fn generate_rounded_rect(
             RenderVertex::new(
                 vertex.position().x,
                 vertex.position().y,
-                0.0, 0.0,
-                1.0, 1.0, 1.0, 1.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
             )
         }),
     );
@@ -195,7 +238,9 @@ pub fn generate_rounded_rect(
 pub fn generate_ellipse(width: f32, height: f32) -> Vec<RenderVertex> {
     use lyon_path::math::point;
     use lyon_path::path::Builder;
-    use lyon_tessellation::{BuffersBuilder, FillOptions, FillTessellator, FillVertex, VertexBuffers};
+    use lyon_tessellation::{
+        BuffersBuilder, FillOptions, FillTessellator, FillVertex, VertexBuffers,
+    };
 
     if width <= 0.0 || height <= 0.0 {
         return Vec::new();
@@ -248,8 +293,12 @@ pub fn generate_ellipse(width: f32, height: f32) -> Vec<RenderVertex> {
             RenderVertex::new(
                 vertex.position().x,
                 vertex.position().y,
-                0.0, 0.0,
-                1.0, 1.0, 1.0, 1.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
             )
         }),
     );
@@ -258,7 +307,9 @@ pub fn generate_ellipse(width: f32, height: f32) -> Vec<RenderVertex> {
 }
 
 // Re-exports for use in other modules
-pub use lyon_tessellation::{VertexBuffers, BuffersBuilder, FillVertex, FillTessellator, FillOptions};
+pub use lyon_tessellation::{
+    BuffersBuilder, FillOptions, FillTessellator, FillVertex, VertexBuffers,
+};
 
 #[cfg(test)]
 mod tests {

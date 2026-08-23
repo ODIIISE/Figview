@@ -20,6 +20,6 @@ pub mod wgpu_renderer;
 
 pub use camera::Camera;
 pub use renderer::{RenderCommand, Renderer};
-pub use scene::{SceneGraph, build_scene_graph};
+pub use scene::{build_scene_graph, SceneGraph};
 pub use transforms::{Matrix, Point, Rect};
 pub use wgpu_renderer::WgpuRenderer;

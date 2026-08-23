@@ -1,4 +1,7 @@
-use crate::state::{self, AppState, DocumentEntry, DocumentMetadata, DocumentSource, LayerTreeNode, NodeProperties, PageMeta, TabInfo};
+use crate::state::{
+    self, AppState, DocumentEntry, DocumentMetadata, DocumentSource, LayerTreeNode, NodeProperties,
+    PageMeta, TabInfo,
+};
 use fig_renderer::renderer::{RenderCommand, Renderer};
 use fig_renderer::scene::build_scene_graph;
 use fig_renderer::WgpuRenderer;
@@ -20,10 +23,14 @@ pub async fn open_file(
     let version = doc.header.version;
     let schema_def_count = doc.header.schema_def_count;
 
-    let pages: Vec<PageMeta> = doc.pages.iter().map(|p| PageMeta {
-        id: format!("{}:{}", p.id.session_id, p.id.local_id),
-        name: p.name.clone(),
-    }).collect();
+    let pages: Vec<PageMeta> = doc
+        .pages
+        .iter()
+        .map(|p| PageMeta {
+            id: format!("{}:{}", p.id.session_id, p.id.local_id),
+            name: p.name.clone(),
+        })
+        .collect();
 
     // Build scene graph
     let scene_graph = build_scene_graph(&doc);
@@ -79,10 +86,14 @@ pub async fn open_file_bytes(
     let version = doc.header.version;
     let schema_def_count = doc.header.schema_def_count;
 
-    let pages: Vec<PageMeta> = doc.pages.iter().map(|p| PageMeta {
-        id: format!("{}:{}", p.id.session_id, p.id.local_id),
-        name: p.name.clone(),
-    }).collect();
+    let pages: Vec<PageMeta> = doc
+        .pages
+        .iter()
+        .map(|p| PageMeta {
+            id: format!("{}:{}", p.id.session_id, p.id.local_id),
+            name: p.name.clone(),
+        })
+        .collect();
 
     let scene_graph = build_scene_graph(&doc);
 
@@ -168,13 +179,18 @@ pub async fn get_node_properties(
     let entry = docs.get(&document_id).ok_or("Document not found")?;
 
     // Find the node in the flat list
-    let node = entry.document.nodes.iter().find(|n| {
-        if let Some(ref guid) = n.guid {
-            format!("{}:{}", guid.session_id, guid.local_id) == node_id
-        } else {
-            false
-        }
-    }).ok_or("Node not found")?;
+    let node = entry
+        .document
+        .nodes
+        .iter()
+        .find(|n| {
+            if let Some(ref guid) = n.guid {
+                format!("{}:{}", guid.session_id, guid.local_id) == node_id
+            } else {
+                false
+            }
+        })
+        .ok_or("Node not found")?;
 
     Ok(NodeProperties {
         id: node_id,
@@ -189,9 +205,16 @@ pub async fn get_node_properties(
         fill_count: node.fill_paints.len(),
         stroke_weight: node.stroke_weight,
         corner_radius: node.corner_radius,
-        font_family: node.text_data.as_ref().and_then(|td| td.font_family.clone()),
+        font_family: node
+            .text_data
+            .as_ref()
+            .and_then(|td| td.font_family.clone()),
         font_size: node.text_data.as_ref().map(|td| td.font_size),
-        font_weight: node.text_data.as_ref().map(|td| td.font_weight).unwrap_or(400.0),
+        font_weight: node
+            .text_data
+            .as_ref()
+            .map(|td| td.font_weight)
+            .unwrap_or(400.0),
         text_characters: node.text_data.as_ref().map(|td| td.characters.clone()),
     })
 }
@@ -236,10 +259,7 @@ pub async fn render_frame(state: State<'_, AppState>) -> Result<Vec<u8>, String>
 
 /// Set the active page.
 #[tauri::command]
-pub async fn set_page(
-    page_index: usize,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn set_page(page_index: usize, state: State<'_, AppState>) -> Result<(), String> {
     let mut renderer = state.renderer.lock().unwrap();
     let r = renderer.as_mut().ok_or("Renderer not initialized")?;
     r.handle_command(RenderCommand::SetPage(page_index))?;
@@ -265,7 +285,11 @@ pub async fn zoom_at(
 ) -> Result<(), String> {
     let mut renderer = state.renderer.lock().unwrap();
     let r = renderer.as_mut().ok_or("Renderer not initialized")?;
-    r.handle_command(RenderCommand::ZoomAt { screen_x, screen_y, zoom })?;
+    r.handle_command(RenderCommand::ZoomAt {
+        screen_x,
+        screen_y,
+        zoom,
+    })?;
     Ok(())
 }
 
@@ -289,7 +313,10 @@ pub async fn fit_page(padding: f32, state: State<'_, AppState>) -> Result<(), St
 
 /// Select a node.
 #[tauri::command]
-pub async fn select_node(node_id: Option<String>, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn select_node(
+    node_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut renderer = state.renderer.lock().unwrap();
     let r = renderer.as_mut().ok_or("Renderer not initialized")?;
     r.handle_command(RenderCommand::SelectNode(node_id))?;

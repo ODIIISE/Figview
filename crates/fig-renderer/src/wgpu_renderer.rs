@@ -117,11 +117,12 @@ impl WgpuRenderer {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let gradient_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("gradient uniforms"),
-            contents: &[0u8; std::mem::size_of::<gradients::GradientUniforms>()],
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
+        let gradient_uniform_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("gradient uniforms"),
+                contents: &[0u8; std::mem::size_of::<gradients::GradientUniforms>()],
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
 
         let texture_manager = TextureManager::new(&device);
 
@@ -151,19 +152,21 @@ impl WgpuRenderer {
 
     /// Build bind group layouts for the scene and gradient uniforms.
     fn build_bind_group_layouts(&mut self) {
-        let scene_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("scene uniform layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-        });
+        let scene_layout = self
+            .device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("scene uniform layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
 
         let scene_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("scene bind group"),
@@ -174,19 +177,21 @@ impl WgpuRenderer {
             }],
         });
 
-        let gradient_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("gradient uniform layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-        });
+        let gradient_layout =
+            self.device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("gradient uniform layout"),
+                    entries: &[wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    }],
+                });
 
         self.scene_bind_group_layout = Some(scene_layout);
         self.scene_bind_group = Some(scene_bind_group);
@@ -267,18 +272,21 @@ impl WgpuRenderer {
             return None;
         }
 
-        let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some(&format!("vbo_{}", key)),
-            contents: bytemuck::cast_slice(&vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
+        let vertex_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some(&format!("vbo_{}", key)),
+                contents: bytemuck::cast_slice(&vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
 
         let index_buffer = indices.as_ref().map(|idx| {
-            self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(&format!("ibo_{}", key)),
-                contents: bytemuck::cast_slice(idx),
-                usage: wgpu::BufferUsages::INDEX,
-            })
+            self.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some(&format!("ibo_{}", key)),
+                    contents: bytemuck::cast_slice(idx),
+                    usage: wgpu::BufferUsages::INDEX,
+                })
         });
 
         let geo = GpuGeometry {
@@ -293,9 +301,7 @@ impl WgpuRenderer {
     }
 
     /// Build triangle geometry for a render node based on its type.
-    fn build_shape_geometry(
-        node: &RenderNode,
-    ) -> (Vec<shapes::RenderVertex>, Option<Vec<u32>>) {
+    fn build_shape_geometry(node: &RenderNode) -> (Vec<shapes::RenderVertex>, Option<Vec<u32>>) {
         let width = node.size.map(|s| s.x).unwrap_or(0.0);
         let height = node.size.map(|s| s.y).unwrap_or(0.0);
 
@@ -321,9 +327,12 @@ impl WgpuRenderer {
                     bottom_left: r,
                 });
                 let verts = shapes::generate_rounded_rect(
-                    width, height,
-                    radii.top_left, radii.top_right,
-                    radii.bottom_right, radii.bottom_left,
+                    width,
+                    height,
+                    radii.top_left,
+                    radii.top_right,
+                    radii.bottom_right,
+                    radii.bottom_left,
                 );
                 (verts, None)
             }
@@ -337,9 +346,12 @@ impl WgpuRenderer {
                         bottom_left: r,
                     });
                     let verts = shapes::generate_rounded_rect(
-                        width, height,
-                        radii.top_left, radii.top_right,
-                        radii.bottom_right, radii.bottom_left,
+                        width,
+                        height,
+                        radii.top_left,
+                        radii.top_right,
+                        radii.bottom_right,
+                        radii.bottom_left,
                     );
                     (verts, None)
                 } else {
@@ -355,11 +367,7 @@ impl WgpuRenderer {
     }
 
     /// Draw the entire scene into a render pass.
-    fn draw_scene<'a>(
-        &'a self,
-        pass: &mut wgpu::RenderPass<'a>,
-        pipelines: &'a RenderPipelines,
-    ) {
+    fn draw_scene<'a>(&'a self, pass: &mut wgpu::RenderPass<'a>, pipelines: &'a RenderPipelines) {
         let sg = match self.scene_graph.as_ref() {
             Some(sg) => sg,
             None => return,
@@ -519,7 +527,11 @@ impl Renderer for WgpuRenderer {
             RenderCommand::SetZoom(z) => {
                 self.camera.set_zoom(z);
             }
-            RenderCommand::ZoomAt { screen_x, screen_y, zoom } => {
+            RenderCommand::ZoomAt {
+                screen_x,
+                screen_y,
+                zoom,
+            } => {
                 self.camera.zoom_at(screen_x, screen_y, zoom);
             }
             RenderCommand::Pan { dx, dy } => {
@@ -581,16 +593,24 @@ impl Renderer for WgpuRenderer {
         let w = (self.width as f32 * self.dpr) as u32;
         let h = (self.height as f32 * self.dpr) as u32;
 
-        let render_view = self.render_texture_view.as_ref()
+        let render_view = self
+            .render_texture_view
+            .as_ref()
             .ok_or_else(|| "Render target not created".to_string())?;
-        let readback = self.readback_buffer.as_ref()
+        let readback = self
+            .readback_buffer
+            .as_ref()
             .ok_or_else(|| "Readback buffer not created".to_string())?;
-        let pipelines = self.pipelines.as_ref()
+        let pipelines = self
+            .pipelines
+            .as_ref()
             .ok_or_else(|| "Pipelines not initialized".to_string())?;
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("render encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("render encoder"),
+            });
 
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

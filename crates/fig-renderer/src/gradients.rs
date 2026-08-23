@@ -3,8 +3,8 @@
 //! Encodes Figma gradient data into a fixed-size uniform buffer
 //! that the gradient fragment shader can consume directly.
 
-use fig_parser::types::{Matrix, Paint, PaintType};
 use crate::transforms;
+use fig_parser::types::{Matrix, Paint, PaintType};
 
 /// Maximum number of gradient stops supported in the shader.
 pub const MAX_STOPS: usize = 8;
@@ -122,10 +122,8 @@ fn invert_gradient_matrix(m: &Matrix) -> Option<[f32; 16]> {
 
     // Return 4x4 column-major
     Some([
-        inv_m00, inv_m10, 0.0, 0.0,
-        inv_m01, inv_m11, 0.0, 0.0,
-        0.0,     0.0,     1.0, 0.0,
-        inv_m02, inv_m12, 0.0, 1.0,
+        inv_m00, inv_m10, 0.0, 0.0, inv_m01, inv_m11, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, inv_m02,
+        inv_m12, 0.0, 1.0,
     ])
 }
 
@@ -138,7 +136,12 @@ mod tests {
     fn solid_paint_has_zero_stops() {
         let paint = Paint {
             paint_type: PaintType::Solid,
-            color: Some(Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 }),
+            color: Some(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }),
             opacity: 1.0,
             visible: true,
             stops: vec![],
@@ -158,8 +161,24 @@ mod tests {
             opacity: 1.0,
             visible: true,
             stops: vec![
-                ColorStop { color: Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 }, position: 0.0 },
-                ColorStop { color: Color { r: 0.0, g: 0.0, b: 1.0, a: 1.0 }, position: 1.0 },
+                ColorStop {
+                    color: Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    },
+                    position: 0.0,
+                },
+                ColorStop {
+                    color: Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 1.0,
+                        a: 1.0,
+                    },
+                    position: 1.0,
+                },
             ],
             transform: None,
             image_hash: None,

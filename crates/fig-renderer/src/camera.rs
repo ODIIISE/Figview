@@ -94,7 +94,9 @@ impl Camera {
         let content_h = rect.height().max(1.0);
         let avail_w = (self.viewport_width - padding * 2.0).max(1.0);
         let avail_h = (self.viewport_height - padding * 2.0).max(1.0);
-        self.zoom = (avail_w / content_w).min(avail_h / content_h).clamp(self.min_zoom, self.max_zoom);
+        self.zoom = (avail_w / content_w)
+            .min(avail_h / content_h)
+            .clamp(self.min_zoom, self.max_zoom);
         self.pan_x = (self.viewport_width - content_w * self.zoom) / 2.0 - rect.min_x * self.zoom;
         self.pan_y = (self.viewport_height - content_h * self.zoom) / 2.0 - rect.min_y * self.zoom;
     }
@@ -139,19 +141,29 @@ impl Camera {
         // Orthographic projection: maps [0, w] x [0, h] → [-1, 1] x [-1, 1]
         // X: [0, w] → [-1, 1], Y: [0, h] → [1, -1] (flip Y for wgpu)
         let proj: [f32; 16] = [
-            2.0 / w, 0.0,      0.0, 0.0,
-            0.0,     -2.0 / h, 0.0, 0.0,
-            0.0,      0.0,     1.0, 0.0,
-            -1.0,     1.0,     0.0, 1.0,
+            2.0 / w,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            -2.0 / h,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            -1.0,
+            1.0,
+            0.0,
+            1.0,
         ];
 
         // View: pan + zoom
         let z = self.zoom;
         let view: [f32; 16] = [
-            z,   0.0, 0.0, 0.0,
-            0.0, z,   0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            self.pan_x, self.pan_y, 0.0, 1.0,
+            z, 0.0, 0.0, 0.0, 0.0, z, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, self.pan_x, self.pan_y, 0.0,
+            1.0,
         ];
 
         // Multiply: P * V
@@ -164,11 +176,10 @@ fn multiply_4x4(a: &[f32; 16], b: &[f32; 16]) -> [f32; 16] {
     let mut result = [0.0f32; 16];
     for col in 0..4 {
         for row in 0..4 {
-            result[col * 4 + row] =
-                a[0 * 4 + row] * b[col * 4 + 0] +
-                a[1 * 4 + row] * b[col * 4 + 1] +
-                a[2 * 4 + row] * b[col * 4 + 2] +
-                a[3 * 4 + row] * b[col * 4 + 3];
+            result[col * 4 + row] = a[0 * 4 + row] * b[col * 4 + 0]
+                + a[1 * 4 + row] * b[col * 4 + 1]
+                + a[2 * 4 + row] * b[col * 4 + 2]
+                + a[3 * 4 + row] * b[col * 4 + 3];
         }
     }
     result

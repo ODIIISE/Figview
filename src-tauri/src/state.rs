@@ -94,10 +94,7 @@ impl AppState {
 }
 
 /// Build a lightweight layer tree from a scene graph page.
-pub fn build_layer_tree(
-    scene_graph: &SceneGraph,
-    page_index: usize,
-) -> Vec<LayerTreeNode> {
+pub fn build_layer_tree(scene_graph: &SceneGraph, page_index: usize) -> Vec<LayerTreeNode> {
     let tree = match scene_graph.trees.get(page_index) {
         Some(t) => t,
         None => return Vec::new(),
@@ -109,7 +106,10 @@ pub fn build_layer_tree(
         .collect()
 }
 
-fn build_layer_node(tree: &fig_renderer::scene::RenderTree, node_idx: usize) -> Option<LayerTreeNode> {
+fn build_layer_node(
+    tree: &fig_renderer::scene::RenderTree,
+    node_idx: usize,
+) -> Option<LayerTreeNode> {
     let node = tree.nodes.get(node_idx)?;
 
     let node_id = format!("{}:{}", node.id.session_id, node.id.local_id);

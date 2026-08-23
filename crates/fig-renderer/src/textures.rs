@@ -84,10 +84,8 @@ impl TextureManager {
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.textures.insert(
-            hash.to_string(),
-            GpuTexture { texture, view },
-        );
+        self.textures
+            .insert(hash.to_string(), GpuTexture { texture, view });
 
         Some(&self.textures[hash].view)
     }

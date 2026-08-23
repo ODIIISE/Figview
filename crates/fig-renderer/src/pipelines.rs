@@ -42,9 +42,11 @@ fn create_solid_pipeline(
 ) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("solid shader"),
-        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(
-            &format!("{}\n{}", shaders::VS_SCENE, shaders::FS_SOLID),
-        )),
+        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&format!(
+            "{}\n{}",
+            shaders::VS_SCENE,
+            shaders::FS_SOLID
+        ))),
     });
 
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -112,38 +114,42 @@ fn create_gradient_pipeline(
 ) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("gradient shader"),
-        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(
-            &format!("{}\n{}", shaders::VS_SCENE, shaders::FS_GRADIENT),
-        )),
+        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&format!(
+            "{}\n{}",
+            shaders::VS_SCENE,
+            shaders::FS_GRADIENT
+        ))),
     });
 
-    let scene_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("scene uniforms"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            visibility: wgpu::ShaderStages::VERTEX,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }],
-    });
+    let scene_bind_group_layout =
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("scene uniforms"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
 
-    let gradient_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("gradient uniforms"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }],
-    });
+    let gradient_bind_group_layout =
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("gradient uniforms"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("gradient pipeline layout"),
@@ -196,9 +202,11 @@ fn create_image_pipeline(
 ) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("image shader"),
-        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(
-            &format!("{}\n{}", shaders::VS_SCENE, shaders::FS_IMAGE),
-        )),
+        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&format!(
+            "{}\n{}",
+            shaders::VS_SCENE,
+            shaders::FS_IMAGE
+        ))),
     });
 
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -284,9 +292,11 @@ fn create_highlight_pipeline(
 ) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("highlight shader"),
-        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(
-            &format!("{}\n{}", shaders::VS_HIGHLIGHT, shaders::FS_HIGHLIGHT),
-        )),
+        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&format!(
+            "{}\n{}",
+            shaders::VS_HIGHLIGHT,
+            shaders::FS_HIGHLIGHT
+        ))),
     });
 
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {

@@ -1,8 +1,8 @@
 //! Path tessellation: converts Figma path commands into GPU triangle meshes.
 
-use fig_parser::types::{GeometryPath, PathCommand, WindingRule};
 use crate::shapes::RenderVertex;
-use crate::shapes::{VertexBuffers, BuffersBuilder, FillVertex, FillTessellator, FillOptions};
+use crate::shapes::{BuffersBuilder, FillOptions, FillTessellator, FillVertex, VertexBuffers};
+use fig_parser::types::{GeometryPath, PathCommand, WindingRule};
 use lyon_path::math::point;
 use lyon_path::Builder;
 
@@ -35,7 +35,14 @@ pub fn tessellate_geometry_path(
                 }
                 builder.line_to(point(x * scale_x, y * scale_y));
             }
-            PathCommand::CubicTo { x1, y1, x2, y2, x, y } => {
+            PathCommand::CubicTo {
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            } => {
                 if !has_open {
                     builder.begin(point(0.0, 0.0));
                     has_open = true;
@@ -63,11 +70,13 @@ pub fn tessellate_geometry_path(
 
     let mut geometry: VertexBuffers<RenderVertex, u32> = VertexBuffers::new();
     let mut tessellator = FillTessellator::new();
-    let options = FillOptions::default().with_tolerance(0.5)
-        .with_fill_rule(match geo_path.winding_rule {
-            WindingRule::EvenOdd => lyon_tessellation::FillRule::EvenOdd,
-            WindingRule::NonZero => lyon_tessellation::FillRule::NonZero,
-        });
+    let options =
+        FillOptions::default()
+            .with_tolerance(0.5)
+            .with_fill_rule(match geo_path.winding_rule {
+                WindingRule::EvenOdd => lyon_tessellation::FillRule::EvenOdd,
+                WindingRule::NonZero => lyon_tessellation::FillRule::NonZero,
+            });
 
     let _ = tessellator.tessellate_path(
         &path,
@@ -76,8 +85,12 @@ pub fn tessellate_geometry_path(
             RenderVertex::new(
                 vertex.position().x,
                 vertex.position().y,
-                0.0, 0.0,
-                1.0, 1.0, 1.0, 1.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
             )
         }),
     );
@@ -118,7 +131,11 @@ mod tests {
             style_id: 0,
         };
         let verts = tessellate_geometry_path(&path, 1.0, 1.0);
-        assert!(!verts.is_empty(), "Tessellated rect should produce vertices: got {}", verts.len());
+        assert!(
+            !verts.is_empty(),
+            "Tessellated rect should produce vertices: got {}",
+            verts.len()
+        );
     }
 
     #[test]

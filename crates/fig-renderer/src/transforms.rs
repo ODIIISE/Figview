@@ -37,10 +37,20 @@ pub struct Rect {
 }
 
 impl Rect {
-    pub const ZERO: Self = Self { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 };
+    pub const ZERO: Self = Self {
+        min_x: 0.0,
+        min_y: 0.0,
+        max_x: 0.0,
+        max_y: 0.0,
+    };
 
     pub fn new(min_x: f32, min_y: f32, max_x: f32, max_y: f32) -> Self {
-        Self { min_x, min_y, max_x, max_y }
+        Self {
+            min_x,
+            min_y,
+            max_x,
+            max_y,
+        }
     }
 
     pub fn from_origin_size(origin_x: f32, origin_y: f32, width: f32, height: f32) -> Self {
@@ -99,8 +109,12 @@ impl Rect {
 
 /// Identity matrix.
 pub const IDENTITY: Matrix = Matrix {
-    m00: 1.0, m01: 0.0, m02: 0.0,
-    m10: 0.0, m11: 1.0, m12: 0.0,
+    m00: 1.0,
+    m01: 0.0,
+    m02: 0.0,
+    m10: 0.0,
+    m11: 1.0,
+    m12: 0.0,
 };
 
 /// Multiply two affine matrices: a * b.
@@ -135,10 +149,7 @@ pub fn transform_point(m: &Matrix, x: f32, y: f32) -> Point {
 
 /// Identity 4x4 column-major matrix.
 pub const IDENTITY_4X4: [f32; 16] = [
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    0.0, 0.0, 0.0, 1.0,
+    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
 ];
 
 /// Convert a Matrix to a column-major [f32; 16] (4x4) suitable for GPU uniforms.
@@ -150,17 +161,18 @@ pub const IDENTITY_4X4: [f32; 16] = [
 ///   [m00, m10, 0, 0, m01, m11, 0, 0, 0, 0, 1, 0, m02, m12, 0, 1]
 pub fn to_column_major_4x4(m: &Matrix) -> [f32; 16] {
     [
-        m.m00, m.m10, 0.0, 0.0,
-        m.m01, m.m11, 0.0, 0.0,
-        0.0,   0.0,   1.0, 0.0,
-        m.m02, m.m12, 0.0, 1.0,
+        m.m00, m.m10, 0.0, 0.0, m.m01, m.m11, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, m.m02, m.m12, 0.0, 1.0,
     ]
 }
 
 /// Y-axis flip matrix (Figma uses Y-down, GPU often uses Y-up).
 pub const FLIP_Y: Matrix = Matrix {
-    m00: 1.0, m01: 0.0,  m02: 0.0,
-    m10: 0.0, m11: -1.0, m12: 0.0,
+    m00: 1.0,
+    m01: 0.0,
+    m02: 0.0,
+    m10: 0.0,
+    m11: -1.0,
+    m12: 0.0,
 };
 
 #[cfg(test)]

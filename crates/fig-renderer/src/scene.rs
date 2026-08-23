@@ -3,8 +3,8 @@
 //! Converts the flat FigDocument (Vec of nodes + children_map) into a
 //! hierarchical RenderTree with pre-computed world transforms and bounds.
 
-use fig_parser::types::*;
 use crate::transforms::{self, Matrix, Rect};
+use fig_parser::types::*;
 
 /// A node in the pre-computed render tree.
 #[derive(Debug, Clone)]
@@ -71,9 +71,7 @@ pub fn build_scene_graph(doc: &FigDocument) -> SceneGraph {
 
     let trees: Vec<RenderTree> = pages
         .iter()
-        .filter_map(|(page_id, page_name)| {
-            build_render_tree(doc, page_id, page_name.clone())
-        })
+        .filter_map(|(page_id, page_name)| build_render_tree(doc, page_id, page_name.clone()))
         .collect();
 
     SceneGraph {
@@ -151,9 +149,8 @@ fn build_node_subtree(
         .unwrap_or(transforms::IDENTITY);
 
     let size = node.size;
-    let bounds = size.map(|s| {
-        Rect::from_origin_size(0.0, 0.0, s.x, s.y).transform(&world_transform)
-    });
+    let bounds =
+        size.map(|s| Rect::from_origin_size(0.0, 0.0, s.x, s.y).transform(&world_transform));
 
     // Build children first
     let mut child_indices: Vec<usize> = Vec::new();
@@ -241,32 +238,59 @@ mod tests {
             },
             file_name: "test".into(),
             document_id: None,
-            pages: vec![Page { id: NodeId::new(0, 1), name: "Page 1".into() }],
-            nodes: vec![
-                FigNode {
-                    guid: Some(NodeId::new(1, 1)),
-                    node_type: NodeType::Frame,
-                    name: "Frame 1".into(),
-                    visible: true,
+            pages: vec![Page {
+                id: NodeId::new(0, 1),
+                name: "Page 1".into(),
+            }],
+            nodes: vec![FigNode {
+                guid: Some(NodeId::new(1, 1)),
+                node_type: NodeType::Frame,
+                name: "Frame 1".into(),
+                visible: true,
+                opacity: 1.0,
+                size: Some(Vec2::new(100.0, 100.0)),
+                transform: Some(Matrix {
+                    m00: 1.0,
+                    m01: 0.0,
+                    m02: 10.0,
+                    m10: 0.0,
+                    m11: 1.0,
+                    m12: 20.0,
+                }),
+                fill_paints: vec![Paint {
+                    paint_type: PaintType::Solid,
+                    color: Some(Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    }),
                     opacity: 1.0,
-                    size: Some(Vec2::new(100.0, 100.0)),
-                    transform: Some(Matrix { m00: 1.0, m01: 0.0, m02: 10.0, m10: 0.0, m11: 1.0, m12: 20.0 }),
-                    fill_paints: vec![Paint {
-                        paint_type: PaintType::Solid,
-                        color: Some(Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 }),
-                        opacity: 1.0, visible: true,
-                        stops: vec![], transform: None, image_hash: None, gradient_handles: vec![],
-                    }],
-                    // ...default rest
-                    phase: None, parent_id: None, position: None, locked: false,
-                    corner_radius: None, corner_radii: None, clips_content: false,
-                    blend_mode: "PASS_THROUGH".into(),
-                    background_paints: vec![], stroke_paints: vec![],
-                    stroke_weight: 0.0, stroke_align: StrokeAlign::Center,
-                    effects: vec![], fill_geometry: vec![], stroke_geometry: vec![],
-                    vector_geometry: None, text_data: None,
-                },
-            ],
+                    visible: true,
+                    stops: vec![],
+                    transform: None,
+                    image_hash: None,
+                    gradient_handles: vec![],
+                }],
+                // ...default rest
+                phase: None,
+                parent_id: None,
+                position: None,
+                locked: false,
+                corner_radius: None,
+                corner_radii: None,
+                clips_content: false,
+                blend_mode: "PASS_THROUGH".into(),
+                background_paints: vec![],
+                stroke_paints: vec![],
+                stroke_weight: 0.0,
+                stroke_align: StrokeAlign::Center,
+                effects: vec![],
+                fill_geometry: vec![],
+                stroke_geometry: vec![],
+                vector_geometry: None,
+                text_data: None,
+            }],
             children_map: {
                 let mut m = std::collections::HashMap::new();
                 m.insert("0:1".into(), vec!["1:1".into()]);

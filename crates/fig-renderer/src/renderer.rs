@@ -13,7 +13,11 @@ pub enum RenderCommand {
     /// Set the current zoom level.
     SetZoom(f32),
     /// Zoom centered on a screen point.
-    ZoomAt { screen_x: f32, screen_y: f32, zoom: f32 },
+    ZoomAt {
+        screen_x: f32,
+        screen_y: f32,
+        zoom: f32,
+    },
     /// Pan by a screen-space delta.
     Pan { dx: f32, dy: f32 },
     /// Fit the current page content in the viewport.
