@@ -63,6 +63,7 @@ let activePage = null;
 let selection = null;
 let zoom = 1;
 let ox = 0, oy = 0;
+let nodeMap = new Map();
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
@@ -131,9 +132,9 @@ function onDocLoaded(name) {
   }
   activePage = doc.pages[0];
   selection = null;
-  zoom = 1;
-  ox = oy = 0;
+  nodeMap = new Map(doc.nodes.map(n => [nid(n), n]));
   renderAll();
+  fitToInitialFrame();
   document.getElementById('tab-bar').innerHTML = `<div class="tab active"><span class="name">${esc(name)}</span><span class="close" data-close-tab>&times;</span></div>`;
 }
 
@@ -149,6 +150,7 @@ function closeTab() {
   doc = null;
   activePage = null;
   selection = null;
+  nodeMap.clear();
   renderAll();
 }
 
@@ -175,7 +177,12 @@ function renderAll() {
 function renderPages() {
   const el = document.getElementById('pages');
   el.innerHTML = doc.pages.map(p => `<div class="page${activePage && p.id.session_id === activePage.id.session_id && p.id.local_id === activePage.id.local_id ? ' active' : ''}" data-page="${p.id.session_id}:${p.id.local_id}">📄 ${esc(p.name)}</div>`).join('');
-  el.querySelectorAll('.page').forEach(e => e.onclick = () => { activePage = doc.pages.find(p => `${p.id.session_id}:${p.id.local_id}` === e.dataset.page); renderAll(); });
+  el.querySelectorAll('.page').forEach(e => e.onclick = () => {
+    activePage = doc.pages.find(p => `${p.id.session_id}:${p.id.local_id}` === e.dataset.page);
+    selection = null;
+    renderAll();
+    fitToInitialFrame();
+  });
 }
 
 function renderLayers() {
@@ -183,23 +190,23 @@ function renderLayers() {
   if (!activePage) { el.innerHTML = ''; return; }
   const key = `${activePage.id.session_id}:${activePage.id.local_id}`;
   const ids = doc.children_map[key] || [];
-  const nodes = doc.nodes;
-  el.innerHTML = ids.map(id => layerItem(id, 0, nodes)).join('');
+  el.innerHTML = ids.map(id => layerItem(id, 0)).join('');
   el.querySelectorAll('.layer').forEach(e => e.onclick = () => {
-    selection = nodes.find(n => nid(n) === e.dataset.id);
+    selection = nodeMap.get(e.dataset.id) || null;
     renderAll();
+    centerOnNode(e.dataset.id);
   });
 }
 
-function layerItem(id, depth, nodes) {
-  const n = nodes.find(x => nid(x) === id);
+function layerItem(id, depth) {
+  const n = nodeMap.get(id);
   if (!n || n.phase === 'Removed') return '';
   const kids = doc.children_map[id] || [];
   const sel = selection && nid(selection) === id;
   const icons = {Frame:'⊞',Group:'⊟',Text:'T',Rectangle:'▭',Ellipse:'○',Line:'╱',Vector:'✦',Component:'◇',Instance:'◈',Section:'§',BooleanGroup:'⊕',Canvas:'📄'};
   return `<div class="layer${sel?' selected':''}" data-id="${id}" style="padding-left:${10+depth*14}px">
     <span class="icon">${icons[n.node_type]||'◆'}</span><span class="name">${esc(n.name)}</span>
-  </div>${kids.map(kid => layerItem(kid, depth+1, nodes)).join('')}`;
+  </div>${kids.map(kid => layerItem(kid, depth+1)).join('')}`;
 }
 
 function renderCanvas() {
@@ -220,7 +227,7 @@ function renderCanvas() {
 }
 
 function drawNode(id) {
-  const n = doc.nodes.find(x => nid(x) === id);
+  const n = nodeMap.get(id);
   if (!n || !n.visible || n.phase === 'Removed') return;
   ctx.save();
   if (n.transform) ctx.transform(n.transform.m00, n.transform.m10, n.transform.m01, n.transform.m11, n.transform.m02, n.transform.m12);
@@ -297,6 +304,152 @@ function drawNode(id) {
   ctx.restore();
 }
 
+function fitToInitialFrame() {
+  if (!doc || !activePage) return;
+  const key = `${activePage.id.session_id}:${activePage.id.local_id}`;
+  const ids = doc.children_map[key] || [];
+  const first = ids.find(id => {
+    const n = nodeMap.get(id);
+    return n && n.visible && n.phase !== 'Removed' && n.size;
+  });
+  if (first) fitToNode(first);
+  else fitToPage();
+}
+
+function fitToPage() {
+  if (!doc || !activePage) return;
+  const key = `${activePage.id.session_id}:${activePage.id.local_id}`;
+  fitToNodes(doc.children_map[key] || []);
+}
+
+function fitToNode(id) {
+  const node = nodeMap.get(id);
+  if (!node) return;
+  const parentMatrix = node.parent_id ? worldMatrix(nodeId(node.parent_id)) : null;
+  const bounds = nodeBounds(id, parentMatrix);
+  if (bounds) fitToBounds(bounds);
+}
+
+function centerOnNode(id) {
+  const node = nodeMap.get(id);
+  if (!node) return;
+  const parentMatrix = node.parent_id ? worldMatrix(nodeId(node.parent_id)) : null;
+  const bounds = nodeBounds(id, parentMatrix);
+  if (bounds) centerOnBounds(bounds);
+}
+
+function focusBounds() {
+  if (selection) {
+    const parentMatrix = selection.parent_id ? worldMatrix(nodeId(selection.parent_id)) : null;
+    const selectedBounds = nodeBounds(nid(selection), parentMatrix);
+    if (selectedBounds) return selectedBounds;
+  }
+  const key = activePage ? `${activePage.id.session_id}:${activePage.id.local_id}` : '';
+  const first = (doc?.children_map[key] || []).find(id => {
+    const n = nodeMap.get(id);
+    return n && n.visible && n.phase !== 'Removed' && n.size;
+  });
+  if (!first) return null;
+  return nodeBounds(first, null);
+}
+
+function centerOnBounds(bounds) {
+  const width = document.getElementById('canvas-wrap').clientWidth;
+  const height = document.getElementById('canvas-wrap').clientHeight;
+  if (width <= 0 || height <= 0) {
+    requestAnimationFrame(() => centerOnBounds(bounds));
+    return;
+  }
+  ox = width / 2 - (bounds.x + bounds.width / 2) * zoom;
+  oy = height / 2 - (bounds.y + bounds.height / 2) * zoom;
+  renderCanvas();
+}
+
+function setZoomCentered(nextZoom) {
+  zoom = nextZoom;
+  const bounds = focusBounds();
+  if (bounds) centerOnBounds(bounds);
+  else renderCanvas();
+}
+
+function worldMatrix(id, seen = new Set()) {
+  if (seen.has(id)) return null;
+  seen.add(id);
+  const node = nodeMap.get(id);
+  if (!node) return null;
+  const parent = node.parent_id ? worldMatrix(nodeId(node.parent_id), seen) : null;
+  return multiplyMatrix(parent, node.transform);
+}
+
+function fitToNodes(ids) {
+  const bounds = ids.reduce((result, id) => mergeBounds(result, nodeBounds(id, null)), null);
+  if (bounds) fitToBounds(bounds);
+}
+
+function fitToBounds(bounds) {
+  const width = document.getElementById('canvas-wrap').clientWidth;
+  const height = document.getElementById('canvas-wrap').clientHeight;
+  if (width <= 0 || height <= 0) {
+    requestAnimationFrame(() => fitToBounds(bounds));
+    return;
+  }
+  const padding = 32;
+  const contentWidth = Math.max(bounds.width, 1);
+  const contentHeight = Math.max(bounds.height, 1);
+  zoom = Math.min((width - padding * 2) / contentWidth, (height - padding * 2) / contentHeight, 2);
+  zoom = Math.max(0.01, zoom);
+  ox = (width - contentWidth * zoom) / 2 - bounds.x * zoom;
+  oy = (height - contentHeight * zoom) / 2 - bounds.y * zoom;
+  renderCanvas();
+}
+
+function nodeBounds(id, parentMatrix) {
+  const n = nodeMap.get(id);
+  if (!n || !n.visible || n.phase === 'Removed') return null;
+  const matrix = multiplyMatrix(parentMatrix, n.transform);
+  const size = n.size || { x: 0, y: 0 };
+  let bounds = rectBounds(matrix, size.x, size.y);
+  for (const child of doc.children_map[id] || []) bounds = mergeBounds(bounds, nodeBounds(child, matrix));
+  return bounds;
+}
+
+function multiplyMatrix(parent, local) {
+  if (!parent) return local || { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
+  if (!local) return parent;
+  return {
+    m00: parent.m00 * local.m00 + parent.m01 * local.m10,
+    m01: parent.m00 * local.m01 + parent.m01 * local.m11,
+    m02: parent.m00 * local.m02 + parent.m01 * local.m12 + parent.m02,
+    m10: parent.m10 * local.m00 + parent.m11 * local.m10,
+    m11: parent.m10 * local.m01 + parent.m11 * local.m11,
+    m12: parent.m10 * local.m02 + parent.m11 * local.m12 + parent.m12
+  };
+}
+
+function rectBounds(matrix, width, height) {
+  const points = [[0, 0], [width, 0], [0, height], [width, height]];
+  const transformed = points.map(([x, y]) => ({
+    x: matrix.m00 * x + matrix.m01 * y + matrix.m02,
+    y: matrix.m10 * x + matrix.m11 * y + matrix.m12
+  }));
+  return {
+    x: Math.min(...transformed.map(p => p.x)),
+    y: Math.min(...transformed.map(p => p.y)),
+    width: Math.max(...transformed.map(p => p.x)) - Math.min(...transformed.map(p => p.x)),
+    height: Math.max(...transformed.map(p => p.y)) - Math.min(...transformed.map(p => p.y))
+  };
+}
+
+function mergeBounds(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  const right = Math.max(a.x + a.width, b.x + b.width);
+  const bottom = Math.max(a.y + a.height, b.y + b.height);
+  return { x, y, width: right - x, height: bottom - y };
+}
+
 function renderProps() {
   const el = document.getElementById('props');
   if (!selection) { el.innerHTML = ''; return; }
@@ -319,7 +472,13 @@ function renderProps() {
 }
 
 // ── Utilities ──
-function nid(n) { return n.guid ? `${n.guid.session_id}:${n.guid.local_id}` : ''; }
+function nodeId(value) {
+  if (typeof value === 'string') return value;
+  return value && Number.isFinite(value.session_id) && Number.isFinite(value.local_id)
+    ? `${value.session_id}:${value.local_id}`
+    : '';
+}
+function nid(n) { return nodeId(n.guid); }
 function rgba(c, a) { return `rgba(${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0},${a??c.a})`; }
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 function f(v) { return Math.round(v*100)/100; }
@@ -329,17 +488,17 @@ document.getElementById('open-file').onclick = openDialog;
 document.getElementById('tab-bar').addEventListener('click', e => {
   if (e.target.closest('[data-close-tab]')) closeTab();
 });
-document.getElementById('canvas-wrap').addEventListener('wheel', e => { e.preventDefault(); const f = e.deltaY < 0 ? 1.12 : 0.9; zoom = Math.max(0.1, Math.min(zoom * f, 8)); renderCanvas(); });
+document.getElementById('canvas-wrap').addEventListener('wheel', e => { e.preventDefault(); const f = e.deltaY < 0 ? 1.12 : 0.9; zoom = Math.max(0.01, Math.min(zoom * f, 8)); renderCanvas(); });
 document.getElementById('zin').onclick = () => { zoom = Math.min(zoom*1.25, 8); renderCanvas(); };
-document.getElementById('zout').onclick = () => { zoom = Math.max(zoom*0.8, 0.25); renderCanvas(); };
-document.getElementById('fit').onclick = () => { zoom = 0.5; ox = oy = 0; renderCanvas(); };
-document.getElementById('z100').onclick = () => { zoom = 1; ox = oy = 0; renderCanvas(); };
+document.getElementById('zout').onclick = () => { zoom = Math.max(zoom*0.8, 0.01); renderCanvas(); };
+document.getElementById('fit').onclick = fitToPage;
+document.getElementById('z100').onclick = () => setZoomCentered(1);
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey||e.metaKey) && e.key === 'o') { e.preventDefault(); openDialog(); }
   if (e.key === '+'||e.key === '=') { zoom = Math.min(zoom*1.25, 8); renderCanvas(); }
-  if (e.key === '-') { zoom = Math.max(zoom*0.8, 0.25); renderCanvas(); }
-  if (e.key === '1' && !e.ctrlKey) { zoom = 1; renderCanvas(); }
-  if (e.key === '0' && !e.ctrlKey) { zoom = 1; ox = oy = 0; renderCanvas(); }
+  if (e.key === '-') { zoom = Math.max(zoom*0.8, 0.01); renderCanvas(); }
+  if (e.key === '1' && !e.ctrlKey) { setZoomCentered(1); }
+  if (e.key === '0' && !e.ctrlKey) { setZoomCentered(1); }
   if (e.key === 'Escape') { selection = null; renderAll(); }
 });
 
