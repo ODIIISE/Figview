@@ -15,6 +15,18 @@ pub async fn open_file(path: String, state: State<'_, AppState>) -> Result<serde
 }
 
 #[tauri::command]
+pub async fn open_file_bytes(data: Vec<u8>, name: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let doc = fig_parser::parse_bytes(&data).map_err(|e| e.to_string())?;
+    let id = uuid();
+    let display_name = doc.file_name.clone();
+    let json = serde_json::to_value(&doc).map_err(|e| e.to_string())?;
+    state.tabs.lock().unwrap().push(TabInfo { document_id: id.clone(), path: name.clone(), name: display_name });
+    *state.active_document.lock().unwrap() = Some(id.clone());
+    state.documents.lock().unwrap().insert(id, (doc, name));
+    Ok(json)
+}
+
+#[tauri::command]
 pub async fn close_file(document_id: String, state: State<'_, AppState>) -> Result<(), String> {
     state.documents.lock().unwrap().remove(&document_id);
     let mut tabs = state.tabs.lock().unwrap();

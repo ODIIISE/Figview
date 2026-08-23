@@ -66,44 +66,72 @@ let ox = 0, oy = 0;
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
-// ── File open (Tauri fallback → drag & drop) ──
+// ── File open ──
+const isTauri = !!(window.__TAURI__?.core?.invoke);
+
 async function openDialog() {
-  try {
-    const { invoke } = window.__TAURI__?.core || {};
-    if (invoke) {
-      const path = await invoke('plugin:dialog|open', { filters: [{ name: 'Figma', extensions: ['fig'] }], multiple: false });
-      if (path) { await loadFile(path); return; }
-    }
-  } catch { /* not in Tauri */ }
-  // Fallback: native file input
+  if (isTauri) {
+    try {
+      const path = await window.__TAURI__.core.invoke('plugin:dialog|open', {
+        filters: [{ name: 'Figma', extensions: ['fig'] }], multiple: false
+      });
+      if (path) { await loadFromPath(path); return; }
+    } catch (e) { console.error('Tauri dialog failed:', e); }
+  }
+  // Fallback file input
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.fig';
-  inp.onchange = async () => { if (inp.files[0]) await loadFile(inp.files[0]); };
+  inp.onchange = async () => { if (inp.files[0]) await loadFromFile(inp.files[0]); };
   inp.click();
 }
 
-async function loadFile(file) {
-  const name = file.name || file.path?.split('/').pop() || 'Untitled';
-  if (typeof file === 'string') {
-    // Tauri path
-    const { invoke } = window.__TAURI__.core;
-    doc = await invoke('open_file', { path: file });
-  } else {
-    // Browser File
-    const buf = await file.arrayBuffer();
-    const arr = new Uint8Array(buf);
-    // In browser: call Rust via WASM (not wired yet — use mock for dev)
-    // For now, show a message
-    alert('Browser mode: drop a .fig file exported JSON to test rendering.\n\nTauri mode: run `cargo tauri dev` for full parser integration.');
-    return;
+async function loadFromPath(path) {
+  showLoading('Opening file...');
+  try {
+    doc = await window.__TAURI__.core.invoke('open_file', { path });
+    onDocLoaded(path.split(/[/\\]/).pop());
+  } catch (e) {
+    showError('Failed to open: ' + e);
+    console.error(e);
   }
+}
 
-  // ── Render tabs ──
-  const tb = document.getElementById('tab-bar');
-  tb.innerHTML = `<div class="tab active"><span class="name">${esc(name)}</span><span class="close" onclick="closeTab()">&times;</span></div>`;
-  if (doc.pages.length) activePage = doc.pages[0];
+async function loadFromFile(file) {
+  const name = file.name || 'Untitled.fig';
+  showLoading('Parsing file...');
+  try {
+    if (isTauri) {
+      // Send raw bytes to Rust command — converts ArrayBuffer → number[] for IPC
+      const buf = await file.arrayBuffer();
+      const bytes = Array.from(new Uint8Array(buf));
+      doc = await window.__TAURI__.core.invoke('open_file_bytes', { data: bytes, name });
+    } else {
+      // Browser-only: show message since parser runs in Rust
+      alert('Browser-only mode — no Rust parser available.\n\nUse the Tauri app to open .fig files.');
+      return;
+    }
+    onDocLoaded(name);
+  } catch (e) {
+    showError('Failed to parse: ' + e);
+    console.error(e);
+  }
+}
+
+function onDocLoaded(name) {
+  if (!doc || !doc.pages) { showError('No pages found in document'); return; }
+  activePage = doc.pages[0];
   selection = null;
   zoom = 1;
+  ox = oy = 0;
   renderAll();
+  document.getElementById('tab-bar').innerHTML = `<div class="tab active"><span class="name">${esc(name)}</span><span class="close" onclick="closeTab()">&times;</span></div>`;
+}
+
+function showLoading(msg) {
+  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:var(--ac)">⏳ ${esc(msg)}</div>`;
+}
+
+function showError(msg) {
+  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:#e06c75">❌ ${esc(msg)} <span class="close" onclick="closeTab()">&times;</span></div>`;
 }
 
 function closeTab() { doc = null; renderAll(); }
@@ -288,8 +316,21 @@ document.addEventListener('keydown', e => {
 new ResizeObserver(() => renderCanvas()).observe(document.getElementById('canvas-wrap'));
 
 // ── Drag & drop ──
-document.body.addEventListener('dragover', e => e.preventDefault());
-document.body.addEventListener('drop', async e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) await loadFile(f); });
+document.body.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+document.body.addEventListener('drop', async e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.toLowerCase().endsWith('.fig')) await loadFromFile(f);
+  else showError('Drop a .fig file here');
+});
+
+// ── Tauri file-drop listener (catches OS-level drops that bypass HTML events) ──
+if (isTauri) {
+  window.__TAURI__.event?.listen?.('tauri://drag-drop', (event) => {
+    const paths = event.payload?.paths;
+    if (paths?.length) loadFromPath(paths[0]);
+  }).catch(() => {});
+}
 </script>
 </body>
 </html>

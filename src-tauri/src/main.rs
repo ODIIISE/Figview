@@ -19,6 +19,7 @@ pub fn run() {
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             commands::open_file,
+            commands::open_file_bytes,
             commands::close_file,
             commands::get_image,
             commands::get_documents,
