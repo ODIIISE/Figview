@@ -1,0 +1,7 @@
+{
+  "name": "fig-viewer",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri"
+  }
+}
