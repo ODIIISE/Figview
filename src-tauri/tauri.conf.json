@@ -1,6 +1,6 @@
 {
   "productName": "FIG Viewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.odiise.figviewer",
   "build": {
     "frontendDist": "../src",
@@ -9,6 +9,10 @@
     "beforeBuildCommand": ""
   },
   "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "capabilities": ["default"]
+    },
     "windows": [{
       "title": "FIG Viewer",
       "width": 1400,

@@ -6,7 +6,7 @@ Open `.fig` files locally, inspect pages and layers, and view designs on a canva
 
 ## Features (v1)
 
-- 📂 Open `.fig` files (double-click, Ctrl+O, drag & drop)
+- 📂 Open `.fig` files (Open button, Ctrl+O, drag & drop)
 - 📑 Multi-tab support for multiple documents
 - 📄 Pages panel with page switching
 - 🌳 Layers tree with expand/collapse and type icons
@@ -28,14 +28,13 @@ Open `.fig` files locally, inspect pages and layers, and view designs on a canva
 | Binary protocol | `kiwi-schema` (Evan Wallace, MIT) |
 | Desktop shell | Tauri 2.x |
 | UI rendering | HTML5 Canvas 2D + Vanilla TypeScript |
-| Installer | Tauri NSIS bundler (Windows) |
+| Windows distribution | Portable `fig-viewer.exe` |
 
 ## Project Structure
 
 ```
 ├── crates/
-│   ├── fig-document/     # Platform-independent document types
-│   └── fig-parser/       # .fig → FigDocument parsing pipeline
+│   └── fig-parser/       # .fig → FigDocument parsing pipeline and types
 ├── src-tauri/            # Tauri backend (commands, state, platform)
 ├── src/                  # Frontend (TypeScript + HTML + CSS)
 ├── Cargo.toml            # Workspace root
@@ -47,30 +46,25 @@ Open `.fig` files locally, inspect pages and layers, and view designs on a canva
 ### Prerequisites
 
 - Rust 1.80+ (`rustup`)
-- Node.js 18+
-- npm
+- Windows WebView2 Runtime on Windows
 
 ### Development
 
 ```bash
-# Install dependencies
-npm install
+# Check and test the workspace
+cargo check --workspace
+cargo test --workspace
 
-# Build Rust crates
-cargo build
-
-# Run parser test (inspect a .fig file)
+# Run parser inspection on a .fig file
 cargo run --example inspect -- path/to/your/file.fig
 
-# Run Tauri dev server
-cargo tauri dev
+# Build the portable desktop executable
+cargo build --release -p fig-viewer
 ```
 
-### Production build (Windows)
+The portable executable is written to `target/release/fig-viewer.exe`. It embeds the UI and parser, so no Node.js, npm, Rust, or developer tools are needed on the machine that runs the copied executable.
 
-```bash
-cargo tauri build
-```
+The portable build does not register `.fig` file associations. Use the Open button, Ctrl+O, or drag a `.fig` file onto the window until an installer is added.
 
 ## Test with the sample file
 

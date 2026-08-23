@@ -42,13 +42,13 @@ canvas{position:absolute;top:0;left:0}
 </head>
 <body>
 <div id="app">
-  <div id="tab-bar"><div class="tab-placeholder empty" style="padding:8px;justify-content:flex-start;flex:1">Drag a .fig file here or press Ctrl+O</div></div>
+  <div id="tab-bar"><div class="tab-placeholder empty" style="padding:8px;justify-content:flex-start;flex:1">Choose Open, press Ctrl+O, or drop a .fig file here</div></div>
   <div id="main">
     <div id="sidebar"><div class="panel-header">PAGES</div><div class="scroll" id="pages"></div><div class="panel-header" style="border-top:1px solid var(--bo)">LAYERS</div><div class="scroll" id="layers"></div></div>
     <div id="canvas-area">
       <div id="zoom-bar">
-        <div><button id="zout">−</button><span id="zoom-lvl">100%</span><button id="zin">+</button></div>
-        <div><button id="fit">Fit</button><button id="z100">100%</button></div>
+        <div><button id="open-file" type="button">Open</button><button id="zout" type="button">−</button><span id="zoom-lvl">100%</span><button id="zin" type="button">+</button></div>
+        <div><button id="fit" type="button">Fit</button><button id="z100" type="button">100%</button></div>
       </div>
       <div id="canvas-wrap"><canvas id="c"></canvas></div>
     </div>
@@ -67,31 +67,39 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
 // ── File open ──
-const isTauri = !!(window.__TAURI__?.core?.invoke);
+const tauri = window.__TAURI__;
+const isTauri = !!tauri?.core?.invoke;
 
 async function openDialog() {
-  if (isTauri) {
+  if (tauri?.dialog?.open) {
     try {
-      const path = await window.__TAURI__.core.invoke('plugin:dialog|open', {
-        filters: [{ name: 'Figma', extensions: ['fig'] }], multiple: false
+      const path = await tauri.dialog.open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: 'Figma files', extensions: ['fig'] }]
       });
-      if (path) { await loadFromPath(path); return; }
-    } catch (e) { console.error('Tauri dialog failed:', e); }
+      if (typeof path === 'string' && path.length > 0) await loadFromPath(path);
+      return;
+    } catch (e) {
+      console.error('Tauri dialog failed, using file input fallback:', e);
+    }
   }
-  // Fallback file input
-  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.fig';
-  inp.onchange = async () => { if (inp.files[0]) await loadFromFile(inp.files[0]); };
+
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.fig,application/zip';
+  inp.onchange = async () => { if (inp.files?.[0]) await loadFromFile(inp.files[0]); };
   inp.click();
 }
 
 async function loadFromPath(path) {
   showLoading('Opening file...');
   try {
-    doc = await window.__TAURI__.core.invoke('open_file', { path });
-    onDocLoaded(path.split(/[/\\]/).pop());
+    doc = await tauri.core.invoke('open_file', { path });
+    onDocLoaded(path.split(/[/\\]/).pop() || 'Untitled.fig');
   } catch (e) {
-    showError('Failed to open: ' + e);
-    console.error(e);
+    showError('Failed to open: ' + errorText(e));
+    console.error('open_file failed:', e);
   }
 }
 
@@ -103,7 +111,7 @@ async function loadFromFile(file) {
       // Send raw bytes to Rust command — converts ArrayBuffer → number[] for IPC
       const buf = await file.arrayBuffer();
       const bytes = Array.from(new Uint8Array(buf));
-      doc = await window.__TAURI__.core.invoke('open_file_bytes', { data: bytes, name });
+      doc = await tauri.core.invoke('open_file_bytes', { data: bytes, name });
     } else {
       // Browser-only: show message since parser runs in Rust
       alert('Browser-only mode — no Rust parser available.\n\nUse the Tauri app to open .fig files.');
@@ -117,13 +125,16 @@ async function loadFromFile(file) {
 }
 
 function onDocLoaded(name) {
-  if (!doc || !doc.pages) { showError('No pages found in document'); return; }
+  if (!doc || !Array.isArray(doc.pages) || doc.pages.length === 0) {
+    showError('No pages found in document');
+    return;
+  }
   activePage = doc.pages[0];
   selection = null;
   zoom = 1;
   ox = oy = 0;
   renderAll();
-  document.getElementById('tab-bar').innerHTML = `<div class="tab active"><span class="name">${esc(name)}</span><span class="close" onclick="closeTab()">&times;</span></div>`;
+  document.getElementById('tab-bar').innerHTML = `<div class="tab active"><span class="name">${esc(name)}</span><span class="close" data-close-tab>&times;</span></div>`;
 }
 
 function showLoading(msg) {
@@ -131,14 +142,30 @@ function showLoading(msg) {
 }
 
 function showError(msg) {
-  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:#e06c75">❌ ${esc(msg)} <span class="close" onclick="closeTab()">&times;</span></div>`;
+  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:#e06c75">❌ ${esc(msg)} <span class="close" data-close-tab>&times;</span></div>`;
 }
 
-function closeTab() { doc = null; renderAll(); }
+function closeTab() {
+  doc = null;
+  activePage = null;
+  selection = null;
+  renderAll();
+}
+
+function errorText(error) {
+  return error instanceof Error ? error.message : String(error);
+}
 
 // ── Rendering ──
 function renderAll() {
-  if (!doc) { document.getElementById('tab-bar').innerHTML = '<div class="tab-placeholder empty" style="padding:8px;justify-content:flex-start;flex:1">Drag a .fig file here or press Ctrl+O</div>'; return; }
+  if (!doc) {
+    document.getElementById('pages').innerHTML = '';
+    document.getElementById('layers').innerHTML = '';
+    document.getElementById('props').innerHTML = '';
+    renderCanvas();
+    document.getElementById('tab-bar').innerHTML = '<div class="tab-placeholder empty" style="padding:8px;justify-content:flex-start;flex:1">Choose Open, press Ctrl+O, or drop a .fig file here</div>';
+    return;
+  }
   renderPages();
   renderLayers();
   renderCanvas();
@@ -202,7 +229,7 @@ function drawNode(id) {
 
   // Effects — must be set BEFORE drawing for Canvas 2D shadow to apply
   for (const e of n.effects || []) {
-    if (e.effect_type === 'DROP_SHADOW' && e.visible) {
+    if (e.effect_type === 'DropShadow' && e.visible) {
       ctx.shadowColor = e.color ? rgba(e.color) : 'rgba(0,0,0,0.3)';
       ctx.shadowBlur = e.radius;
       ctx.shadowOffsetX = e.offset.x;
@@ -217,7 +244,7 @@ function drawNode(id) {
   // Fills
   for (const p of n.fill_paints || []) {
     if (!p.visible) continue;
-    if (p.paint_type === 'SOLID' && p.color) {
+    if (p.paint_type === 'Solid' && p.color) {
       ctx.fillStyle = rgba(p.color, p.opacity);
       ctx.fillRect(0, 0, w, h);
     } else if (p.stops && p.stops.length >= 2) {
@@ -227,7 +254,7 @@ function drawNode(id) {
       const y0 = t ? t.m12 : 0;
       const x1 = t ? t.m00 * w + t.m02 : w;
       const y1 = t ? t.m11 * h + t.m12 : h;
-      if (p.paint_type === 'GRADIENT_RADIAL') {
+      if (p.paint_type === 'GradientRadial') {
         const g = ctx.createRadialGradient(x0, y0, 0, x0, y0, Math.max(w, h) * (t ? Math.abs(t.m00) : 1));
         for (const s of p.stops) g.addColorStop(s.position, rgba(s.color));
         ctx.fillStyle = g;
@@ -280,7 +307,7 @@ function renderProps() {
   if (n.transform) h += `<div class="pg"><div class="pl">Position</div><div class="pv">X:${f(n.transform.m02)} Y:${f(n.transform.m12)}</div></div>`;
   h += `<div class="pg"><div class="pl">Opacity</div><div class="pv">${(n.opacity*100)|0}%</div></div>`;
   for (const p of n.fill_paints||[]) {
-    if (p.paint_type === 'SOLID' && p.color) h += `<div class="pg"><div class="pl">Fill</div><div class="pv"><span class="swatch" style="background:${rgba(p.color)}"></span>${rgba(p.color)}</div></div>`;
+    if (p.paint_type === 'Solid' && p.color) h += `<div class="pg"><div class="pl">Fill</div><div class="pv"><span class="swatch" style="background:${rgba(p.color)}"></span>${rgba(p.color)}</div></div>`;
   }
   if (n.stroke_weight > 0) h += `<div class="pg"><div class="pl">Stroke</div><div class="pv">${f(n.stroke_weight)}px</div></div>`;
   if (n.corner_radius) h += `<div class="pg"><div class="pl">Corner</div><div class="pv">${f(n.corner_radius)}</div></div>`;
@@ -298,6 +325,10 @@ function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 function f(v) { return Math.round(v*100)/100; }
 
 // ── Zoom & keyboard ──
+document.getElementById('open-file').onclick = openDialog;
+document.getElementById('tab-bar').addEventListener('click', e => {
+  if (e.target.closest('[data-close-tab]')) closeTab();
+});
 document.getElementById('canvas-wrap').addEventListener('wheel', e => { e.preventDefault(); const f = e.deltaY < 0 ? 1.12 : 0.9; zoom = Math.max(0.1, Math.min(zoom * f, 8)); renderCanvas(); });
 document.getElementById('zin').onclick = () => { zoom = Math.min(zoom*1.25, 8); renderCanvas(); };
 document.getElementById('zout').onclick = () => { zoom = Math.max(zoom*0.8, 0.25); renderCanvas(); };
@@ -316,20 +347,29 @@ document.addEventListener('keydown', e => {
 new ResizeObserver(() => renderCanvas()).observe(document.getElementById('canvas-wrap'));
 
 // ── Drag & drop ──
-document.body.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
-document.body.addEventListener('drop', async e => {
-  e.preventDefault();
-  const f = e.dataTransfer.files[0];
-  if (f && f.name.toLowerCase().endsWith('.fig')) await loadFromFile(f);
-  else showError('Drop a .fig file here');
-});
-
-// ── Tauri file-drop listener (catches OS-level drops that bypass HTML events) ──
-if (isTauri) {
-  window.__TAURI__.event?.listen?.('tauri://drag-drop', (event) => {
+if (tauri?.event?.listen) {
+  // Tauri owns native file drops and supplies absolute paths on Windows.
+  tauri.event.listen('tauri://drag-drop', event => {
     const paths = event.payload?.paths;
-    if (paths?.length) loadFromPath(paths[0]);
-  }).catch(() => {});
+    const path = Array.isArray(paths) ? paths.find(item => typeof item === 'string' && item.toLowerCase().endsWith('.fig')) : null;
+    if (path) void loadFromPath(path);
+    else if (Array.isArray(paths) && paths.length) showError('Drop a .fig file here');
+  }).catch(error => console.error('Tauri drag-drop listener failed:', error));
+} else {
+  // Browser fallback when the HTML file is opened outside Tauri.
+  document.body.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  document.body.addEventListener('drop', async e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.toLowerCase().endsWith('.fig')) await loadFromFile(file);
+    else showError('Drop a .fig file here');
+  });
+}
+
+if (isTauri) {
+  tauri.core.invoke('take_startup_path')
+    .then(path => { if (typeof path === 'string' && path.length > 0) return loadFromPath(path); })
+    .catch(error => console.error('Startup file check failed:', error));
 }
 </script>
 </body>

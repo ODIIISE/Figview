@@ -1,28 +1,59 @@
-use crate::state::{AppState, TabInfo};
-use tauri::State;
+use crate::state::{AppState, DocumentEntry, DocumentSource, TabInfo};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::State;
 
 #[tauri::command]
-pub async fn open_file(path: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn take_startup_path(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    Ok(state.pending_path.lock().unwrap().take())
+}
+
+#[tauri::command]
+pub async fn open_file(
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     let doc = fig_parser::parse_file(&path).map_err(|e| e.to_string())?;
     let id = uuid();
     let name = doc.file_name.clone();
     let json = serde_json::to_value(&doc).map_err(|e| e.to_string())?;
-    state.tabs.lock().unwrap().push(TabInfo { document_id: id.clone(), path: path.clone(), name });
+    state.tabs.lock().unwrap().push(TabInfo {
+        document_id: id.clone(),
+        path: path.clone(),
+        name,
+    });
     *state.active_document.lock().unwrap() = Some(id.clone());
-    state.documents.lock().unwrap().insert(id, (doc, path));
+    state.documents.lock().unwrap().insert(
+        id,
+        DocumentEntry {
+            source: DocumentSource::Path(path),
+        },
+    );
     Ok(json)
 }
 
 #[tauri::command]
-pub async fn open_file_bytes(data: Vec<u8>, name: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn open_file_bytes(
+    data: Vec<u8>,
+    name: String,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     let doc = fig_parser::parse_bytes(&data).map_err(|e| e.to_string())?;
     let id = uuid();
     let display_name = doc.file_name.clone();
     let json = serde_json::to_value(&doc).map_err(|e| e.to_string())?;
-    state.tabs.lock().unwrap().push(TabInfo { document_id: id.clone(), path: name.clone(), name: display_name });
+    state.tabs.lock().unwrap().push(TabInfo {
+        document_id: id.clone(),
+        path: name,
+        name: display_name,
+    });
     *state.active_document.lock().unwrap() = Some(id.clone());
-    state.documents.lock().unwrap().insert(id, (doc, name));
+    state.documents.lock().unwrap().insert(
+        id,
+        DocumentEntry {
+            source: DocumentSource::Bytes(Arc::new(data)),
+        },
+    );
     Ok(json)
 }
 
@@ -32,17 +63,39 @@ pub async fn close_file(document_id: String, state: State<'_, AppState>) -> Resu
     let mut tabs = state.tabs.lock().unwrap();
     tabs.retain(|t| t.document_id != document_id);
     let mut active = state.active_document.lock().unwrap();
-    if *active == Some(document_id.clone()) { *active = tabs.first().map(|t| t.document_id.clone()); }
+    if *active == Some(document_id) {
+        *active = tabs.first().map(|t| t.document_id.clone());
+    }
     Ok(())
 }
 
 #[tauri::command]
-pub async fn get_image(document_id: String, hash: String, state: State<'_, AppState>) -> Result<Vec<u8>, String> {
-    let docs = state.documents.lock().unwrap();
-    let path = docs.get(&document_id).ok_or("Not found")?.1.clone();
-    drop(docs);
-    fig_parser::archive::open_archive(&path).map_err(|e| e.to_string())?
-        .images.get(&hash).cloned().ok_or("Image not found".into())
+pub async fn get_image(
+    document_id: String,
+    hash: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<u8>, String> {
+    let source = {
+        let documents = state.documents.lock().unwrap();
+        documents
+            .get(&document_id)
+            .map(|entry| entry.source.clone())
+    }
+    .ok_or_else(|| "Document not found".to_string())?;
+
+    let archive = match source {
+        DocumentSource::Path(path) => fig_parser::archive::open_archive(&path),
+        DocumentSource::Bytes(data) => {
+            fig_parser::archive::read_archive(std::io::Cursor::new(data.as_ref()))
+        }
+    }
+    .map_err(|e| e.to_string())?;
+
+    archive
+        .images
+        .get(&hash)
+        .cloned()
+        .ok_or_else(|| "Image not found".to_string())
 }
 
 #[tauri::command]
@@ -51,6 +104,8 @@ pub async fn get_documents(state: State<'_, AppState>) -> Result<Vec<TabInfo>, S
 }
 
 fn uuid() -> String {
-    let t = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let t = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     format!("doc-{:x}-{:x}", t.as_secs(), t.subsec_nanos())
 }

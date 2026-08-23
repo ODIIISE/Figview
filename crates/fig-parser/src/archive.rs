@@ -32,8 +32,12 @@ pub fn read_archive<R: Read + std::io::Seek>(reader: R) -> Result<FigArchive, Pa
                 entry.read_to_end(&mut buf)?;
                 canvas_fig = Some(buf);
             }
-            "meta.json" => { entry.read_to_end(&mut meta_json)?; }
-            "thumbnail.png" => { entry.read_to_end(&mut thumbnail)?; }
+            "meta.json" => {
+                entry.read_to_end(&mut meta_json)?;
+            }
+            "thumbnail.png" => {
+                entry.read_to_end(&mut thumbnail)?;
+            }
             _ if name.starts_with("images/") => {
                 if let Some(hash) = name.strip_prefix("images/") {
                     if !hash.is_empty() {

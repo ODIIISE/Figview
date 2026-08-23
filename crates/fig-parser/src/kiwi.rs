@@ -22,7 +22,10 @@ pub fn decode_schema_and_message(
     let root_id = find_root_type(&schema)?;
     let value = Value::decode(&schema, root_id, message_bytes)?;
     let root = extract_root(&value);
-    Ok(KiwiMessage { schema_def_count, root })
+    Ok(KiwiMessage {
+        schema_def_count,
+        root,
+    })
 }
 
 fn find_root_type(schema: &Schema) -> Result<i32, ParseError> {
@@ -32,7 +35,9 @@ fn find_root_type(schema: &Schema) -> Result<i32, ParseError> {
     if !schema.defs.is_empty() {
         return Ok(schema.defs[0].index);
     }
-    Err(ParseError::SchemaDecode("No root type found in schema".into()))
+    Err(ParseError::SchemaDecode(
+        "No root type found in schema".into(),
+    ))
 }
 
 fn value_to_json(value: &Value) -> serde_json::Value {
@@ -64,27 +69,48 @@ fn value_to_json(value: &Value) -> serde_json::Value {
 
 fn extract_root(value: &Value) -> KiwiRoot {
     let node_changes: Vec<serde_json::Value> = match value {
-        Value::Object(_, fields) => fields.get("nodeChanges")
-            .and_then(|v| match v { Value::Array(arr) => Some(arr.iter().map(value_to_json).collect()), _ => None })
+        Value::Object(_, fields) => fields
+            .get("nodeChanges")
+            .and_then(|v| match v {
+                Value::Array(arr) => Some(arr.iter().map(value_to_json).collect()),
+                _ => None,
+            })
             .unwrap_or_default(),
         _ => Vec::new(),
     };
 
     let blobs: Vec<Vec<u8>> = match value {
-        Value::Object(_, fields) => fields.get("blobs")
-            .and_then(|v| match v { Value::Array(arr) => Some(arr), _ => None })
-            .map(|arr| arr.iter().filter_map(|v| match v {
-                Value::Object(_, fields) => fields.get("bytes").and_then(|b| match b {
-                    Value::Array(bytes) => Some(bytes.iter().filter_map(|x| match x {
-                        Value::Byte(y) => Some(*y), _ => None,
-                    }).collect()),
-                    _ => None,
-                }),
+        Value::Object(_, fields) => fields
+            .get("blobs")
+            .and_then(|v| match v {
+                Value::Array(arr) => Some(arr),
                 _ => None,
-            }).collect())
+            })
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| match v {
+                        Value::Object(_, fields) => fields.get("bytes").and_then(|b| match b {
+                            Value::Array(bytes) => Some(
+                                bytes
+                                    .iter()
+                                    .filter_map(|x| match x {
+                                        Value::Byte(y) => Some(*y),
+                                        _ => None,
+                                    })
+                                    .collect(),
+                            ),
+                            _ => None,
+                        }),
+                        _ => None,
+                    })
+                    .collect()
+            })
             .unwrap_or_default(),
         _ => Vec::new(),
     };
 
-    KiwiRoot { node_changes, blobs }
+    KiwiRoot {
+        node_changes,
+        blobs,
+    }
 }

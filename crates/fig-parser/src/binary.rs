@@ -17,7 +17,9 @@ pub struct DecompressedCanvasFig {
 
 pub fn parse_canvas_fig(data: &[u8]) -> Result<DecompressedCanvasFig, ParseError> {
     if data.len() < 12 {
-        return Err(ParseError::Other("canvas.fig too small (< 12 bytes)".into()));
+        return Err(ParseError::Other(
+            "canvas.fig too small (< 12 bytes)".into(),
+        ));
     }
 
     let prelude = String::from_utf8_lossy(&data[0..8]).to_string();
@@ -27,16 +29,20 @@ pub fn parse_canvas_fig(data: &[u8]) -> Result<DecompressedCanvasFig, ParseError
     let mut chunks: Vec<Vec<u8>> = Vec::new();
 
     while pos + 4 <= data.len() {
-        let chunk_len = u32::from_le_bytes([data[pos], data[pos+1], data[pos+2], data[pos+3]]) as usize;
+        let chunk_len =
+            u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]) as usize;
         pos += 4;
-        if pos + chunk_len > data.len() { break; }
+        if pos + chunk_len > data.len() {
+            break;
+        }
         chunks.push(data[pos..pos + chunk_len].to_vec());
         pos += chunk_len;
     }
 
     if chunks.len() < 2 {
         return Err(ParseError::Other(format!(
-            "Expected at least 2 chunks, got {}", chunks.len()
+            "Expected at least 2 chunks, got {}",
+            chunks.len()
         )));
     }
 
@@ -53,7 +59,9 @@ fn decompress_deflate_raw(data: &[u8]) -> Result<Vec<u8>, ParseError> {
     use std::io::Read;
     let mut decoder = DeflateDecoder::new(data);
     let mut out = Vec::new();
-    decoder.read_to_end(&mut out).map_err(|e| ParseError::Deflate(e.to_string()))?;
+    decoder
+        .read_to_end(&mut out)
+        .map_err(|e| ParseError::Deflate(e.to_string()))?;
     Ok(out)
 }
 

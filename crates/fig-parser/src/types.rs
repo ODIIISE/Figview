@@ -9,7 +9,12 @@ pub struct NodeId {
     pub local_id: u32,
 }
 impl NodeId {
-    pub fn new(session_id: u32, local_id: u32) -> Self { Self { session_id, local_id } }
+    pub fn new(session_id: u32, local_id: u32) -> Self {
+        Self {
+            session_id,
+            local_id,
+        }
+    }
 }
 impl std::fmt::Display for NodeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -18,51 +23,120 @@ impl std::fmt::Display for NodeId {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Color { pub r: f32, pub g: f32, pub b: f32, pub a: f32 }
+pub struct Color {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Vec2 { pub x: f32, pub y: f32 }
-impl Vec2 { pub fn new(x: f32, y: f32) -> Self { Self { x, y } } }
+pub struct Vec2 {
+    pub x: f32,
+    pub y: f32,
+}
+impl Vec2 {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self { x, y }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Matrix { pub m00: f32, pub m01: f32, pub m02: f32, pub m10: f32, pub m11: f32, pub m12: f32 }
+pub struct Matrix {
+    pub m00: f32,
+    pub m01: f32,
+    pub m02: f32,
+    pub m10: f32,
+    pub m11: f32,
+    pub m12: f32,
+}
 
 // ── Enums ──
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NodeType {
-    Document, Canvas, Frame, Group, Text, Rectangle, Ellipse, Line, Polygon,
-    Star, Vector, BooleanGroup, Component, ComponentSet, Instance, Section,
-    RoundedRectangle, Table, Widget, Stamp, Unknown,
+    Document,
+    Canvas,
+    Frame,
+    Group,
+    Text,
+    Rectangle,
+    Ellipse,
+    Line,
+    Polygon,
+    Star,
+    Vector,
+    BooleanGroup,
+    Component,
+    ComponentSet,
+    Instance,
+    Section,
+    RoundedRectangle,
+    Table,
+    Widget,
+    Stamp,
+    Unknown,
 }
 impl NodeType {
     pub fn from_str(s: &str) -> Self {
         match s {
-            "DOCUMENT" => Self::Document, "CANVAS" => Self::Canvas,
-            "FRAME" => Self::Frame, "GROUP" => Self::Group, "TEXT" => Self::Text,
-            "RECTANGLE" => Self::Rectangle, "ELLIPSE" => Self::Ellipse,
-            "LINE" => Self::Line, "POLYGON" => Self::Polygon, "STAR" => Self::Star,
-            "VECTOR" => Self::Vector, "BOOLEAN_GROUP" => Self::BooleanGroup,
-            "COMPONENT" => Self::Component, "COMPONENT_SET" => Self::ComponentSet,
-            "INSTANCE" => Self::Instance, "SECTION" => Self::Section,
-            "ROUNDED_RECTANGLE" => Self::RoundedRectangle, "TABLE" => Self::Table,
-            "WIDGET" => Self::Widget, "STAMP" => Self::Stamp,
+            "DOCUMENT" => Self::Document,
+            "CANVAS" => Self::Canvas,
+            "FRAME" => Self::Frame,
+            "GROUP" => Self::Group,
+            "TEXT" => Self::Text,
+            "RECTANGLE" => Self::Rectangle,
+            "ELLIPSE" => Self::Ellipse,
+            "LINE" => Self::Line,
+            "POLYGON" => Self::Polygon,
+            "STAR" => Self::Star,
+            "VECTOR" => Self::Vector,
+            "BOOLEAN_GROUP" => Self::BooleanGroup,
+            "COMPONENT" => Self::Component,
+            "COMPONENT_SET" => Self::ComponentSet,
+            "INSTANCE" => Self::Instance,
+            "SECTION" => Self::Section,
+            "ROUNDED_RECTANGLE" => Self::RoundedRectangle,
+            "TABLE" => Self::Table,
+            "WIDGET" => Self::Widget,
+            "STAMP" => Self::Stamp,
             _ => Self::Unknown,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum NodePhase { Created, Removed }
+pub enum NodePhase {
+    Created,
+    Removed,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PaintType { Solid, GradientLinear, GradientRadial, GradientAngular, GradientDiamond, Image, Emoji, Video }
+pub enum PaintType {
+    Solid,
+    GradientLinear,
+    GradientRadial,
+    GradientAngular,
+    GradientDiamond,
+    Image,
+    Emoji,
+    Video,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum StrokeAlign { Center, Inside, Outside }
+pub enum StrokeAlign {
+    Center,
+    Inside,
+    Outside,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum EffectType { InnerShadow, DropShadow, ForegroundBlur, BackgroundBlur }
+pub enum EffectType {
+    InnerShadow,
+    DropShadow,
+    ForegroundBlur,
+    BackgroundBlur,
+}
 
 // ── Structs ──
 
@@ -79,7 +153,10 @@ pub struct Paint {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ColorStop { pub color: Color, pub position: f32 }
+pub struct ColorStop {
+    pub color: Color,
+    pub position: f32,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Effect {

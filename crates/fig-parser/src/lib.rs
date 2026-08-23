@@ -17,8 +17,16 @@ fn parse_archive(archive: archive::FigArchive) -> Result<FigDocument, error::Par
         serde_json::from_slice(&archive.meta_json)?
     };
     let decompressed = binary::parse_canvas_fig(&archive.canvas_fig)?;
-    let msg = kiwi::decode_schema_and_message(&decompressed.schema_bytes, &decompressed.message_bytes)?;
-    document::build_document(msg, &meta, &archive.thumbnail, &archive.images, &decompressed.prelude, decompressed.version)
+    let msg =
+        kiwi::decode_schema_and_message(&decompressed.schema_bytes, &decompressed.message_bytes)?;
+    document::build_document(
+        msg,
+        &meta,
+        &archive.thumbnail,
+        &archive.images,
+        &decompressed.prelude,
+        decompressed.version,
+    )
 }
 
 pub fn parse_file(path: &str) -> Result<FigDocument, error::ParseError> {
