@@ -16,7 +16,10 @@ pub async fn open_file(
     let doc = fig_parser::parse_file(&path).map_err(|e| e.to_string())?;
     let id = uuid();
     let name = doc.file_name.clone();
-    let json = serde_json::to_value(&doc).map_err(|e| e.to_string())?;
+    let mut json = serde_json::to_value(&doc).map_err(|e| e.to_string())?;
+    json.as_object_mut()
+        .ok_or_else(|| "Serialized document was not an object".to_string())?
+        .insert("document_id".into(), serde_json::Value::String(id.clone()));
     state.tabs.lock().unwrap().push(TabInfo {
         document_id: id.clone(),
         path: path.clone(),
@@ -41,7 +44,10 @@ pub async fn open_file_bytes(
     let doc = fig_parser::parse_bytes(&data).map_err(|e| e.to_string())?;
     let id = uuid();
     let display_name = doc.file_name.clone();
-    let json = serde_json::to_value(&doc).map_err(|e| e.to_string())?;
+    let mut json = serde_json::to_value(&doc).map_err(|e| e.to_string())?;
+    json.as_object_mut()
+        .ok_or_else(|| "Serialized document was not an object".to_string())?
+        .insert("document_id".into(), serde_json::Value::String(id.clone()));
     state.tabs.lock().unwrap().push(TabInfo {
         document_id: id.clone(),
         path: name,

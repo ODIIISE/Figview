@@ -40,6 +40,43 @@ pub fn get_matrix(obj: &serde_json::Value, name: &str) -> Option<Matrix> {
     })
 }
 
+pub fn get_corner_radii(obj: &serde_json::Value) -> Option<CornerRadii> {
+    let fallback = obj
+        .get("cornerRadius")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0) as f32;
+    let read = |name: &str| obj.get(name).and_then(|v| v.as_f64()).map(|v| v as f32);
+    let radii = CornerRadii {
+        top_left: read("rectangleTopLeftCornerRadius").unwrap_or(fallback),
+        top_right: read("rectangleTopRightCornerRadius").unwrap_or(fallback),
+        bottom_right: read("rectangleBottomRightCornerRadius").unwrap_or(fallback),
+        bottom_left: read("rectangleBottomLeftCornerRadius").unwrap_or(fallback),
+    };
+    (radii.top_left > 0.0
+        || radii.top_right > 0.0
+        || radii.bottom_right > 0.0
+        || radii.bottom_left > 0.0)
+        .then_some(radii)
+}
+
+pub fn get_clips_content(obj: &serde_json::Value) -> bool {
+    let is_group_frame = obj.get("type").and_then(|v| v.as_str()) == Some("FRAME")
+        && obj
+            .get("resizeToFit")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        && get_paints(obj, "fillPaints").is_empty()
+        && get_paints(obj, "strokePaints").is_empty()
+        && get_paints(obj, "backgroundPaints").is_empty();
+    if is_group_frame {
+        return false;
+    }
+    obj.get("frameMaskDisabled")
+        .and_then(|v| v.as_bool())
+        .map(|disabled| !disabled)
+        .unwrap_or(true)
+}
+
 pub fn get_parent_index(obj: &serde_json::Value) -> Option<(NodeId, String)> {
     let pi = obj.get("parentIndex")?;
     let guid = pi.get("guid")?;

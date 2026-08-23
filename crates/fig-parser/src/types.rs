@@ -51,6 +51,47 @@ pub struct Matrix {
     pub m12: f32,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum PathCommand {
+    MoveTo {
+        x: f32,
+        y: f32,
+    },
+    LineTo {
+        x: f32,
+        y: f32,
+    },
+    CubicTo {
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+        x: f32,
+        y: f32,
+    },
+    Close,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WindingRule {
+    NonZero,
+    EvenOdd,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GeometryPath {
+    pub commands: Vec<PathCommand>,
+    pub winding_rule: WindingRule,
+    pub style_id: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VectorGeometry {
+    pub paths: Vec<GeometryPath>,
+    pub normalized_size: Option<Vec2>,
+}
+
 // ── Enums ──
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -168,6 +209,14 @@ pub struct Effect {
     pub spread: f32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct CornerRadii {
+    pub top_left: f32,
+    pub top_right: f32,
+    pub bottom_right: f32,
+    pub bottom_left: f32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextData {
     pub characters: String,
@@ -193,11 +242,18 @@ pub struct FigNode {
     pub size: Option<Vec2>,
     pub transform: Option<Matrix>,
     pub corner_radius: Option<f32>,
+    pub corner_radii: Option<CornerRadii>,
+    pub clips_content: bool,
+    pub blend_mode: String,
     pub fill_paints: Vec<Paint>,
+    pub background_paints: Vec<Paint>,
     pub stroke_paints: Vec<Paint>,
     pub stroke_weight: f32,
     pub stroke_align: StrokeAlign,
     pub effects: Vec<Effect>,
+    pub fill_geometry: Vec<GeometryPath>,
+    pub stroke_geometry: Vec<GeometryPath>,
+    pub vector_geometry: Option<VectorGeometry>,
     pub text_data: Option<TextData>,
 }
 
@@ -218,6 +274,8 @@ pub struct FigHeader {
 pub struct FigDocument {
     pub header: FigHeader,
     pub file_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub document_id: Option<String>,
     pub pages: Vec<Page>,
     pub nodes: Vec<FigNode>,
     pub children_map: HashMap<String, Vec<String>>,

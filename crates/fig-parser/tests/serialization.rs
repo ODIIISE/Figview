@@ -41,11 +41,18 @@ fn serialization_matches_frontend() {
         size: None,
         transform: None,
         corner_radius: None,
+        corner_radii: None,
+        clips_content: true,
+        blend_mode: "PASS_THROUGH".into(),
         fill_paints: vec![],
+        background_paints: vec![],
         stroke_paints: vec![],
         stroke_weight: 0.0,
         stroke_align: StrokeAlign::Center,
         effects: vec![],
+        fill_geometry: vec![],
+        stroke_geometry: vec![],
+        vector_geometry: None,
         text_data: None,
     };
     let json = serde_json::to_value(&node).unwrap();

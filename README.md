@@ -10,10 +10,11 @@ Open `.fig` files locally, inspect pages and layers, and view designs on a canva
 - 📑 Multi-tab support for multiple documents
 - 📄 Pages panel with page switching
 - 🌳 Layers tree with expand/collapse and type icons
-- 🎨 Canvas 2D rendering: shapes, fills, strokes, text, transforms
-- 🔍 Zoom (mouse wheel, buttons, fit-to-screen, 100%)
+- 🎨 Canvas 2D rendering: baked Figma vector paths, shapes, fills, gradients, images, strokes, text, transforms
+- 🔍 Infinite-canvas navigation: pointer-centered wheel zoom, middle-button/space-drag pan, fit page, fit selection, 100%
 - 📏 Properties inspector for selected objects
 - 🖱️ Layer ↔ canvas selection synchronization
+- ❔ Shortcuts and controls guide via `? Guide` or `?`
 - 🌑 Dark mode UI inspired by Figma
 
 ## Architecture
@@ -96,7 +97,7 @@ Parsing: Clothing Store App _ Fashion E-Commerce App.fig
 | M1 — Foundation (scaffold + parser) | ✅ Done |
 | M2 — Navigation (pages, layers, tabs) | ✅ Done |
 | M3 — Canvas rendering | ✅ Done |
-| M4 — Advanced (vectors, effects, components) | 🔜 In progress |
+| M4 — Baked vectors, images, gradients, effects, components | ✅ First pass |
 | M5 — Polish (installer, auto-update, perf) | 🔜 Planned |
 
 ## License

@@ -1,6 +1,7 @@
 //! Document tree construction from decoded Kiwi message.
 
 use crate::error::ParseError;
+use crate::geometry;
 use crate::kiwi::KiwiMessage;
 use crate::nodes;
 use crate::types::*;
@@ -19,14 +20,20 @@ pub fn build_document(
         .and_then(|v| v.as_str())
         .unwrap_or("Untitled")
         .to_string();
+    let document_id = meta
+        .get("document_id")
+        .or_else(|| meta.get("file_id"))
+        .and_then(|v| v.as_str())
+        .map(str::to_string);
     let schema_def_count = msg.schema_def_count;
+    let blobs = msg.root.blobs;
 
     let mut nodes: Vec<FigNode> = Vec::with_capacity(msg.root.node_changes.len());
     let mut parent_refs: Vec<(usize, NodeId, String)> = Vec::new();
 
     for raw in &msg.root.node_changes {
         let idx = nodes.len();
-        nodes.push(extract_node(raw));
+        nodes.push(extract_node(raw, &blobs));
         if let Some((pid, pos)) = nodes::get_parent_index(raw) {
             parent_refs.push((idx, pid, pos));
         }
@@ -84,6 +91,7 @@ pub fn build_document(
             schema_def_count,
         },
         file_name,
+        document_id,
         pages,
         nodes,
         children_map,
@@ -92,7 +100,7 @@ pub fn build_document(
     })
 }
 
-fn extract_node(raw: &serde_json::Value) -> FigNode {
+fn extract_node(raw: &serde_json::Value, blobs: &[Vec<u8>]) -> FigNode {
     FigNode {
         guid: nodes::get_guid(raw, "guid"),
         node_type: raw
@@ -124,7 +132,15 @@ fn extract_node(raw: &serde_json::Value) -> FigNode {
             .get("cornerRadius")
             .and_then(|v| v.as_f64())
             .map(|v| v as f32),
+        corner_radii: nodes::get_corner_radii(raw),
+        clips_content: nodes::get_clips_content(raw),
+        blend_mode: raw
+            .get("blendMode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("PASS_THROUGH")
+            .to_string(),
         fill_paints: nodes::get_paints(raw, "fillPaints"),
+        background_paints: nodes::get_paints(raw, "backgroundPaints"),
         stroke_paints: nodes::get_paints(raw, "strokePaints"),
         stroke_weight: raw
             .get("strokeWeight")
@@ -140,6 +156,9 @@ fn extract_node(raw: &serde_json::Value) -> FigNode {
             })
             .unwrap_or(StrokeAlign::Center),
         effects: nodes::get_effects(raw),
+        fill_geometry: geometry::decode_geometry_paths(raw.get("fillGeometry"), blobs),
+        stroke_geometry: geometry::decode_geometry_paths(raw.get("strokeGeometry"), blobs),
+        vector_geometry: geometry::decode_vector_geometry(raw.get("vectorData"), blobs),
         text_data: nodes::get_text_data(raw),
     }
 }

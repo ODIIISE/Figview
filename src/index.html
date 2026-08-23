@@ -6,49 +6,71 @@
 <title>FIG Viewer</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#1e1e1e;--bg2:#2c2c2c;--bg3:#383838;--bo:#3e3e3e;--tx:#e0e0e0;--tx2:#999;--ac:#18a0fb;--sel:#2a4365}
+:root{--bg:#1e1e1e;--bg2:#2c2c2c;--bg3:#383838;--bo:#444;--tx:#e6e6e6;--tx2:#999;--ac:#18a0fb;--sel:#2a4365;--danger:#e06c75}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font:12px system-ui,sans-serif}
+button{font:inherit}
 #app{display:flex;flex-direction:column;height:100vh}
 #tab-bar{display:flex;background:var(--bg2);border-bottom:1px solid var(--bo);padding:0 8px;min-height:32px;align-items:flex-end;gap:2px}
-.tab{display:flex;align-items:center;padding:4px 10px;border-radius:6px 6px 0 0;background:var(--bg3);border:1px solid var(--bo);border-bottom:none;cursor:pointer;font-size:11px;gap:6px;max-width:180px}
+.tab{display:flex;align-items:center;padding:4px 10px;border-radius:6px 6px 0 0;background:var(--bg3);border:1px solid var(--bo);border-bottom:none;cursor:pointer;font-size:11px;gap:6px;max-width:240px}
 .tab.active{background:var(--bg)}
-.tab .close{opacity:0.4;cursor:pointer;font-size:14px}
-.tab .close:hover{opacity:1;color:#e06c75}
+.tab .close{opacity:.5;cursor:pointer;font-size:14px}
+.tab .close:hover{opacity:1;color:var(--danger)}
 .tab .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #main{display:flex;flex:1;overflow:hidden}
 #sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--bo);display:flex;flex-direction:column;overflow:hidden}
 .panel-header{padding:6px 10px;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--tx2);border-bottom:1px solid var(--bo);flex-shrink:0}
 .scroll{flex:1;overflow-y:auto;padding:2px 0}
-.page,.layer{display:flex;align-items:center;padding:3px 10px;cursor:pointer;gap:5px;font-size:11px}
+.page,.layer{display:flex;align-items:center;padding:3px 10px;cursor:pointer;gap:5px;font-size:11px;min-height:21px}
 .page:hover,.layer:hover{background:var(--bg3)}
-.page.active{background:var(--sel)}
-.layer.selected{background:var(--sel)}
+.page.active,.layer.selected{background:var(--sel)}
 .layer .icon{width:14px;text-align:center;flex-shrink:0;font-size:10px}
 .layer .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#zoom-bar{display:flex;justify-content:space-between;align-items:center;padding:4px 10px;background:var(--bg2);border-bottom:1px solid var(--bo);flex-shrink:0}
-#zoom-bar button{background:var(--bg3);border:1px solid var(--bo);color:var(--tx);padding:2px 8px;border-radius:4px;cursor:pointer;font-size:11px;margin:0 2px}
-#zoom-bar button:hover{background:var(--ac)}
-#zoom-lvl{min-width:40px;text-align:center;font-size:11px}
-#canvas-wrap{flex:1;overflow:hidden;position:relative}
-canvas{position:absolute;top:0;left:0}
-#props{width:200px;background:var(--bg2);border-left:1px solid var(--bo);padding:10px;overflow-y:auto;font-size:11px}
-.pg{margin-bottom:8px}
-.pl{color:var(--tx2);font-size:10px;margin-bottom:1px}
-.pv{color:var(--tx)}
-.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;border:1px solid var(--bo);margin-right:4px}
+#canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#zoom-bar{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--bg2);border-bottom:1px solid var(--bo);flex-shrink:0;gap:8px}
+.toolbar-group{display:flex;align-items:center;gap:3px;min-width:0}
+#zoom-bar button{background:var(--bg3);border:1px solid var(--bo);color:var(--tx);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;white-space:nowrap}
+#zoom-bar button:hover{background:var(--ac);border-color:var(--ac);color:#fff}
+#zoom-bar button:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+#zoom-lvl{min-width:48px;text-align:center;color:var(--tx2);font-size:11px}
+#canvas-wrap{flex:1;overflow:hidden;position:relative;background:#e5e5e5;touch-action:none;cursor:default}
+#canvas-wrap.panning{cursor:grabbing}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#props{width:210px;background:var(--bg2);border-left:1px solid var(--bo);padding:10px;overflow-y:auto;font-size:11px;flex-shrink:0}
+.pg{margin-bottom:9px}.pl{color:var(--tx2);font-size:10px;margin-bottom:2px}.pv{color:var(--tx);word-break:break-word}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;border:1px solid var(--bo);margin-right:4px;vertical-align:-1px}
 .empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:14px}
+#guide-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.56);align-items:center;justify-content:center;z-index:20}
+#guide-backdrop.open{display:flex}
+#guide{width:min(430px,calc(100vw - 32px));background:var(--bg2);border:1px solid var(--bo);border-radius:8px;box-shadow:0 18px 60px rgba(0,0,0,.5);padding:18px}
+.guide-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.guide-head h2{font-size:16px;font-weight:600}.guide-close{background:transparent;border:0;color:var(--tx2);font-size:20px;cursor:pointer;padding:0 4px}.guide-close:hover{color:var(--tx)}
+.guide-list{display:grid;grid-template-columns:1fr auto;gap:9px 18px;color:var(--tx2)}.guide-list strong{color:var(--tx);font-weight:500;text-align:right;white-space:nowrap}.guide-foot{margin-top:16px;color:var(--tx2);font-size:11px}
+@media(max-width:900px){#sidebar{width:190px}#props{width:170px}.toolbar-group button{padding-left:5px;padding-right:5px}.toolbar-group #fit-selection{display:none}}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="tab-bar"><div class="tab-placeholder empty" style="padding:8px;justify-content:flex-start;flex:1">Choose Open, press Ctrl+O, or drop a .fig file here</div></div>
   <div id="main">
-    <div id="sidebar"><div class="panel-header">PAGES</div><div class="scroll" id="pages"></div><div class="panel-header" style="border-top:1px solid var(--bo)">LAYERS</div><div class="scroll" id="layers"></div></div>
+    <div id="sidebar">
+      <div class="panel-header">PAGES</div>
+      <div class="scroll" id="pages"></div>
+      <div class="panel-header" style="border-top:1px solid var(--bo)">LAYERS</div>
+      <div class="scroll" id="layers"></div>
+    </div>
     <div id="canvas-area">
       <div id="zoom-bar">
-        <div><button id="open-file" type="button">Open</button><button id="zout" type="button">−</button><span id="zoom-lvl">100%</span><button id="zin" type="button">+</button></div>
-        <div><button id="fit" type="button">Fit</button><button id="z100" type="button">100%</button></div>
+        <div class="toolbar-group">
+          <button id="open-file" type="button" title="Open a .fig file">Open</button>
+          <button id="fit" type="button" title="Fit the page">Fit page</button>
+          <button id="fit-selection" type="button" title="Fit the selected layer">Fit selection</button>
+          <button id="zout" type="button" aria-label="Zoom out" title="Zoom out">-</button>
+          <span id="zoom-lvl">100%</span>
+          <button id="zin" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+        </div>
+        <div class="toolbar-group">
+          <button id="guide-button" type="button" title="Show keyboard and mouse shortcuts">? Guide</button>
+          <button id="z100" type="button" title="Set zoom to 100%">100%</button>
+        </div>
       </div>
       <div id="canvas-wrap"><canvas id="c"></canvas></div>
     </div>
@@ -56,109 +78,160 @@ canvas{position:absolute;top:0;left:0}
   </div>
 </div>
 
+<div id="guide-backdrop" role="presentation">
+  <section id="guide" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+    <div class="guide-head"><h2 id="guide-title">Shortcuts and controls</h2><button class="guide-close" id="guide-close" type="button" aria-label="Close guide">x</button></div>
+    <div class="guide-list">
+      <span>Open file</span><strong>Ctrl+O</strong>
+      <span>Pan canvas</span><strong>Space + drag or middle drag</strong>
+      <span>Zoom at pointer</span><strong>Mouse wheel</strong>
+      <span>Zoom in / out</span><strong>+ / -</strong>
+      <span>Fit page</span><strong>0</strong>
+      <span>Fit selection</span><strong>2</strong>
+      <span>100% centered</span><strong>1</strong>
+      <span>Clear selection</span><strong>Esc</strong>
+      <span>Show this guide</span><strong>?</strong>
+    </div>
+    <div class="guide-foot">The viewer is read-only. Drag a .fig file onto the window or use Open.</div>
+  </section>
+</div>
+
 <script type="module">
-// ── State ──
 let doc = null;
 let activePage = null;
 let selection = null;
-let zoom = 1;
-let ox = 0, oy = 0;
 let nodeMap = new Map();
+let documentId = null;
+let zoom = 1;
+let panX = 0;
+let panY = 0;
+let spaceDown = false;
+let panGesture = null;
+let documentGeneration = 0;
+let openRequest = 0;
+const imageCache = new Map();
+const imageLoads = new Map();
+const pathCache = new WeakMap();
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-
-// ── File open ──
+const wrap = document.getElementById('canvas-wrap');
 const tauri = window.__TAURI__;
 const isTauri = !!tauri?.core?.invoke;
 
 async function openDialog() {
   if (tauri?.dialog?.open) {
     try {
-      const path = await tauri.dialog.open({
-        multiple: false,
-        directory: false,
-        filters: [{ name: 'Figma files', extensions: ['fig'] }]
-      });
+      const path = await tauri.dialog.open({ multiple: false, directory: false, filters: [{ name: 'Figma files', extensions: ['fig'] }] });
       if (typeof path === 'string' && path.length > 0) await loadFromPath(path);
       return;
-    } catch (e) {
-      console.error('Tauri dialog failed, using file input fallback:', e);
+    } catch (error) {
+      console.error('Tauri dialog failed, using file input fallback:', error);
     }
   }
-
-  const inp = document.createElement('input');
-  inp.type = 'file';
-  inp.accept = '.fig,application/zip';
-  inp.onchange = async () => { if (inp.files?.[0]) await loadFromFile(inp.files[0]); };
-  inp.click();
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.fig,application/zip';
+  input.onchange = async () => { if (input.files?.[0]) await loadFromFile(input.files[0]); };
+  input.click();
 }
 
 async function loadFromPath(path) {
+  const request = ++openRequest;
   showLoading('Opening file...');
   try {
-    doc = await tauri.core.invoke('open_file', { path });
-    onDocLoaded(path.split(/[/\\]/).pop() || 'Untitled.fig');
-  } catch (e) {
-    showError('Failed to open: ' + errorText(e));
-    console.error('open_file failed:', e);
+    const nextDoc = await tauri.core.invoke('open_file', { path });
+    if (request !== openRequest) {
+      releaseDocument(nextDoc?.document_id);
+      return;
+    }
+    onDocLoaded(nextDoc, path.split(/[/\\]/).pop() || 'Untitled.fig');
+  } catch (error) {
+    if (request !== openRequest) return;
+    showError('Failed to open: ' + errorText(error));
+    console.error('open_file failed:', error);
   }
 }
 
 async function loadFromFile(file) {
+  const request = ++openRequest;
   const name = file.name || 'Untitled.fig';
   showLoading('Parsing file...');
   try {
-    if (isTauri) {
-      // Send raw bytes to Rust command — converts ArrayBuffer → number[] for IPC
-      const buf = await file.arrayBuffer();
-      const bytes = Array.from(new Uint8Array(buf));
-      doc = await tauri.core.invoke('open_file_bytes', { data: bytes, name });
-    } else {
-      // Browser-only: show message since parser runs in Rust
-      alert('Browser-only mode — no Rust parser available.\n\nUse the Tauri app to open .fig files.');
+    if (!isTauri) {
+      alert('Browser-only mode cannot parse .fig files. Use the portable FIG Viewer application.');
       return;
     }
-    onDocLoaded(name);
-  } catch (e) {
-    showError('Failed to parse: ' + e);
-    console.error(e);
+    const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
+    const nextDoc = await tauri.core.invoke('open_file_bytes', { data: bytes, name });
+    if (request !== openRequest) {
+      releaseDocument(nextDoc?.document_id);
+      return;
+    }
+    onDocLoaded(nextDoc, name);
+  } catch (error) {
+    if (request !== openRequest) return;
+    showError('Failed to parse: ' + errorText(error));
+    console.error('open_file_bytes failed:', error);
   }
 }
 
-function onDocLoaded(name) {
-  if (!doc || !Array.isArray(doc.pages) || doc.pages.length === 0) {
+function onDocLoaded(nextDoc, name) {
+  if (!nextDoc || !Array.isArray(nextDoc.pages) || nextDoc.pages.length === 0) {
+    releaseDocument(nextDoc?.document_id);
     showError('No pages found in document');
     return;
   }
+  const previousDocumentId = documentId;
+  doc = nextDoc;
   activePage = doc.pages[0];
   selection = null;
-  nodeMap = new Map(doc.nodes.map(n => [nid(n), n]));
+  documentId = doc.document_id || null;
+  if (previousDocumentId && previousDocumentId !== documentId) releaseDocument(previousDocumentId);
+  nodeMap = new Map((doc.nodes || []).map(node => [nid(node), node]));
+  documentGeneration += 1;
+  clearImageResources();
   renderAll();
   fitToInitialFrame();
   document.getElementById('tab-bar').innerHTML = `<div class="tab active"><span class="name">${esc(name)}</span><span class="close" data-close-tab>&times;</span></div>`;
 }
 
-function showLoading(msg) {
-  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:var(--ac)">⏳ ${esc(msg)}</div>`;
+function showLoading(message) {
+  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:var(--ac)">${esc(message)}</div>`;
 }
 
-function showError(msg) {
-  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:#e06c75">❌ ${esc(msg)} <span class="close" data-close-tab>&times;</span></div>`;
+function showError(message) {
+  document.getElementById('tab-bar').innerHTML = `<div class="tab active" style="color:var(--danger)">${esc(message)} <span class="close" data-close-tab>&times;</span></div>`;
 }
 
 function closeTab() {
+  const closingDocumentId = documentId;
+  openRequest += 1;
+  documentGeneration += 1;
+  clearImageResources();
   doc = null;
   activePage = null;
   selection = null;
+  documentId = null;
   nodeMap.clear();
+  releaseDocument(closingDocumentId);
   renderAll();
 }
 
-function errorText(error) {
-  return error instanceof Error ? error.message : String(error);
+function releaseDocument(id) {
+  if (!isTauri || !id) return;
+  void tauri.core.invoke('close_file', { document_id: id }).catch(error => console.warn('Document cleanup failed:', error));
 }
 
-// ── Rendering ──
+function clearImageResources() {
+  for (const entry of imageCache.values()) {
+    if (entry.url) URL.revokeObjectURL(entry.url);
+  }
+  imageCache.clear();
+  imageLoads.clear();
+}
+
+function errorText(error) { return error instanceof Error ? error.message : String(error); }
+
 function renderAll() {
   if (!doc) {
     document.getElementById('pages').innerHTML = '';
@@ -175,10 +248,10 @@ function renderAll() {
 }
 
 function renderPages() {
-  const el = document.getElementById('pages');
-  el.innerHTML = doc.pages.map(p => `<div class="page${activePage && p.id.session_id === activePage.id.session_id && p.id.local_id === activePage.id.local_id ? ' active' : ''}" data-page="${p.id.session_id}:${p.id.local_id}">📄 ${esc(p.name)}</div>`).join('');
-  el.querySelectorAll('.page').forEach(e => e.onclick = () => {
-    activePage = doc.pages.find(p => `${p.id.session_id}:${p.id.local_id}` === e.dataset.page);
+  const element = document.getElementById('pages');
+  element.innerHTML = doc.pages.map(page => `<div class="page${sameId(page.id, activePage?.id) ? ' active' : ''}" data-page="${nodeId(page.id)}">${esc(page.name)}</div>`).join('');
+  element.querySelectorAll('.page').forEach(page => page.onclick = () => {
+    activePage = doc.pages.find(item => nodeId(item.id) === page.dataset.page) || activePage;
     selection = null;
     renderAll();
     fitToInitialFrame();
@@ -186,199 +259,327 @@ function renderPages() {
 }
 
 function renderLayers() {
-  const el = document.getElementById('layers');
-  if (!activePage) { el.innerHTML = ''; return; }
-  const key = `${activePage.id.session_id}:${activePage.id.local_id}`;
-  const ids = doc.children_map[key] || [];
-  el.innerHTML = ids.map(id => layerItem(id, 0)).join('');
-  el.querySelectorAll('.layer').forEach(e => e.onclick = () => {
-    selection = nodeMap.get(e.dataset.id) || null;
+  const element = document.getElementById('layers');
+  if (!activePage) { element.innerHTML = ''; return; }
+  const ids = doc.children_map[nodeId(activePage.id)] || [];
+  element.innerHTML = ids.map(id => layerItem(id, 0)).join('');
+  element.querySelectorAll('.layer').forEach(layer => layer.onclick = () => {
+    selection = nodeMap.get(layer.dataset.id) || null;
     renderAll();
-    centerOnNode(e.dataset.id);
+    centerOnNode(layer.dataset.id);
   });
 }
 
 function layerItem(id, depth) {
-  const n = nodeMap.get(id);
-  if (!n || n.phase === 'Removed') return '';
-  const kids = doc.children_map[id] || [];
-  const sel = selection && nid(selection) === id;
-  const icons = {Frame:'⊞',Group:'⊟',Text:'T',Rectangle:'▭',Ellipse:'○',Line:'╱',Vector:'✦',Component:'◇',Instance:'◈',Section:'§',BooleanGroup:'⊕',Canvas:'📄'};
-  return `<div class="layer${sel?' selected':''}" data-id="${id}" style="padding-left:${10+depth*14}px">
-    <span class="icon">${icons[n.node_type]||'◆'}</span><span class="name">${esc(n.name)}</span>
-  </div>${kids.map(kid => layerItem(kid, depth+1)).join('')}`;
+  const node = nodeMap.get(id);
+  if (!node || node.phase === 'Removed') return '';
+  const children = doc.children_map[id] || [];
+  const selected = selection && nid(selection) === id;
+  const icons = { Frame: '[ ]', Group: '[ ]', Text: 'T', Rectangle: '[ ]', RoundedRectangle: '[ ]', Ellipse: 'O', Line: '/', Vector: '*', Component: '<>', Instance: '<>', Section: '#', BooleanGroup: '+', Canvas: 'P' };
+  return `<div class="layer${selected ? ' selected' : ''}" data-id="${id}" style="padding-left:${10 + depth * 14}px"><span class="icon">${icons[node.node_type] || '*'}</span><span class="name">${esc(node.name)}</span></div>${children.map(child => layerItem(child, depth + 1)).join('')}`;
 }
 
 function renderCanvas() {
-  const w = document.getElementById('canvas-wrap').clientWidth;
-  const h = document.getElementById('canvas-wrap').clientHeight;
-  canvas.width = w; canvas.height = h;
-  ctx.clearRect(0, 0, w, h);
+  const width = Math.max(1, Math.floor(wrap.clientWidth));
+  const height = Math.max(1, Math.floor(wrap.clientHeight));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#e5e5e5';
+  ctx.fillRect(0, 0, width, height);
+  document.getElementById('zoom-lvl').textContent = `${Math.round(zoom * 100)}%`;
   if (!doc || !activePage) return;
   ctx.save();
-  ctx.translate(ox, oy);
+  ctx.translate(panX, panY);
   ctx.scale(zoom, zoom);
-  ctx.fillStyle = '#e5e5e5'; ctx.fillRect(-50000, -50000, 100000, 100000);
-  const key = `${activePage.id.session_id}:${activePage.id.local_id}`;
-  const ids = doc.children_map[key] || [];
-  for (const id of ids) drawNode(id);
+  for (const id of doc.children_map[nodeId(activePage.id)] || []) drawNode(id);
   ctx.restore();
-  document.getElementById('zoom-lvl').textContent = Math.round(zoom * 100) + '%';
 }
 
 function drawNode(id) {
-  const n = nodeMap.get(id);
-  if (!n || !n.visible || n.phase === 'Removed') return;
+  const node = nodeMap.get(id);
+  if (!node || !node.visible || node.phase === 'Removed') return;
+  const width = node.size?.x || 0;
+  const height = node.size?.y || 0;
   ctx.save();
-  if (n.transform) ctx.transform(n.transform.m00, n.transform.m10, n.transform.m01, n.transform.m11, n.transform.m02, n.transform.m12);
-  const w = n.size?.x || 0, h = n.size?.y || 0;
-  if (n.opacity < 1) ctx.globalAlpha *= n.opacity;
+  if (node.transform) ctx.transform(node.transform.m00, node.transform.m10, node.transform.m01, node.transform.m11, node.transform.m02, node.transform.m12);
+  ctx.globalAlpha *= Number.isFinite(node.opacity) ? node.opacity : 1;
+  ctx.globalCompositeOperation = compositeOperation(node.blend_mode);
 
-  // Effects — must be set BEFORE drawing for Canvas 2D shadow to apply
-  for (const e of n.effects || []) {
-    if (e.effect_type === 'DropShadow' && e.visible) {
-      ctx.shadowColor = e.color ? rgba(e.color) : 'rgba(0,0,0,0.3)';
-      ctx.shadowBlur = e.radius;
-      ctx.shadowOffsetX = e.offset.x;
-      ctx.shadowOffsetY = e.offset.y;
-    }
-  }
-
-  // Clipping (Frames + Components + Instances clip children by default)
-  const isContainer = n.node_type === 'Frame' || n.node_type === 'Component' || n.node_type === 'Instance';
-  if (isContainer) { ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip(); }
-
-  // Fills
-  for (const p of n.fill_paints || []) {
-    if (!p.visible) continue;
-    if (p.paint_type === 'Solid' && p.color) {
-      ctx.fillStyle = rgba(p.color, p.opacity);
-      ctx.fillRect(0, 0, w, h);
-    } else if (p.stops && p.stops.length >= 2) {
-      // Gradients: use transform to derive handles, or fall back to node edges
-      const t = p.transform;
-      const x0 = t ? t.m02 : 0;
-      const y0 = t ? t.m12 : 0;
-      const x1 = t ? t.m00 * w + t.m02 : w;
-      const y1 = t ? t.m11 * h + t.m12 : h;
-      if (p.paint_type === 'GradientRadial') {
-        const g = ctx.createRadialGradient(x0, y0, 0, x0, y0, Math.max(w, h) * (t ? Math.abs(t.m00) : 1));
-        for (const s of p.stops) g.addColorStop(s.position, rgba(s.color));
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
-      } else {
-        const g = ctx.createLinearGradient(x0, y0, x1, y1);
-        for (const s of p.stops) g.addColorStop(s.position, rgba(s.color));
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
-      }
-    }
-  }
-
-  // Text
-  if (n.text_data && n.node_type === 'Text') {
-    const td = n.text_data;
-    ctx.font = `${td.font_weight||400} ${td.font_size||16}px ${td.font_family||'system-ui,sans-serif'}`;
-    const textColor = td.fills?.[0]?.color || n.fill_paints?.[0]?.color;
-    if (textColor) ctx.fillStyle = rgba(textColor);
-    ctx.fillText(td.characters||'', 0, (td.font_size||16)*0.8);
-  }
-
-  // Strokes
-  if (n.stroke_weight > 0 && n.stroke_paints?.length) {
-    ctx.strokeStyle = n.stroke_paints[0].color ? rgba(n.stroke_paints[0].color) : '#000';
-    ctx.lineWidth = n.stroke_weight;
-    ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.stroke();
-  }
-
-  // Selection
-  if (selection && nid(selection) === id) {
-    ctx.strokeStyle = '#18a0fb';
-    ctx.lineWidth = 2 / (ctx.getTransform().a || 1);
-    ctx.beginPath(); ctx.rect(-1, -1, w+2, h+2); ctx.stroke();
-  }
-
-  // Children
-  const kids = doc.children_map[id] || [];
-  for (const cid of kids) drawNode(cid);
+  ctx.save();
+  applyShadow(node.effects);
+  drawNodeContent(node, width, height);
   ctx.restore();
+
+  const container = node.node_type === 'Frame' || node.node_type === 'Component' || node.node_type === 'Instance' || node.node_type === 'Section';
+  if (container && node.clips_content) {
+    ctx.save();
+    clipNode(node, width, height);
+    for (const child of doc.children_map[id] || []) drawNode(child);
+    ctx.restore();
+  } else {
+    for (const child of doc.children_map[id] || []) drawNode(child);
+  }
+
+  if (selection && nid(selection) === id) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = '#18a0fb';
+    ctx.lineWidth = Math.max(1, 2 / zoom);
+    ctx.setLineDash([4 / zoom, 3 / zoom]);
+    const path = fallbackPath(node, width, height);
+    if (path) ctx.stroke(path);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawNodeContent(node, width, height) {
+  if (node.node_type === 'Text' && node.text_data) {
+    drawText(node, width, height);
+  } else {
+    const fillPaints = (node.fill_paints?.length ? node.fill_paints : node.background_paints) || [];
+    const fillGeometry = geometryForNode(node, width, height);
+    if (fillGeometry?.paths.length) drawPaintedPaths(fillGeometry.paths, fillPaints, fillGeometry.sx, fillGeometry.sy, width, height, false);
+    else if (width > 0 && height > 0 && fillPaints.length) {
+      const path = fallbackPath(node, width, height);
+      const paint = fillPaints.find(item => item.visible !== false);
+      if (path && paint) drawPaintOnPath(path, paint, width, height, 'nonzero');
+    }
+    const strokeGeometry = node.stroke_geometry?.length ? { paths: node.stroke_geometry, sx: 1, sy: 1 } : (node.vector_geometry?.paths?.length ? { paths: node.vector_geometry.paths, sx: vectorScale(node, width, height).x, sy: vectorScale(node, width, height).y } : null);
+    if (strokeGeometry?.paths.length && node.stroke_paints?.length) drawPaintedPaths(strokeGeometry.paths, node.stroke_paints, strokeGeometry.sx, strokeGeometry.sy, width, height, true);
+    else if (node.stroke_weight > 0 && node.stroke_paints?.length) drawFallbackStroke(node, width, height);
+  }
+}
+
+function geometryForNode(node, width, height) {
+  if (node.fill_geometry?.length) return { paths: node.fill_geometry, sx: 1, sy: 1 };
+  if (node.vector_geometry?.paths?.length) {
+    const scale = vectorScale(node, width, height);
+    return { paths: node.vector_geometry.paths, sx: scale.x, sy: scale.y };
+  }
+  return null;
+}
+
+function vectorScale(node, width, height) {
+  const normalized = node.vector_geometry?.normalized_size;
+  return { x: normalized?.x ? width / normalized.x : 1, y: normalized?.y ? height / normalized.y : 1 };
+}
+
+function drawPaintedPaths(paths, paints, sx, sy, width, height, stroke) {
+  for (const path of paths) {
+    const paint = paints[path.style_id] || paints[0];
+    if (!paint || paint.visible === false) continue;
+    const shape = pathFromCommands(path.commands, sx, sy);
+    if (shape) drawPaintOnPath(shape, paint, width, height, path.winding_rule === 'EvenOdd' ? 'evenodd' : 'nonzero');
+  }
+}
+
+function drawPaintOnPath(path, paint, width, height, rule) {
+  if (!paint || paint.visible === false) return;
+  const alpha = Number.isFinite(paint.opacity) ? paint.opacity : 1;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  if (paint.paint_type === 'Image' && paint.image_hash) {
+    const image = ensureImage(paint.image_hash);
+    ctx.save();
+    ctx.clip(path, rule);
+    if (image) ctx.drawImage(image, 0, 0, width, height);
+    ctx.restore();
+  } else {
+    const fill = paintStyle(paint, width, height);
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.fill(path, rule);
+    }
+  }
+  ctx.restore();
+}
+
+function drawFallbackStroke(node, width, height) {
+  const paint = node.stroke_paints[0];
+  const path = fallbackPath(node, width, height);
+  if (!path || !paint) return;
+  ctx.save();
+  ctx.strokeStyle = paint.color ? rgba(paint.color, paint.opacity) : '#000';
+  ctx.lineWidth = node.stroke_weight || 1;
+  ctx.stroke(path);
+  ctx.restore();
+}
+
+function drawText(node, width, height) {
+  const data = node.text_data;
+  const paint = data.fills?.find(item => item.visible !== false) || node.fill_paints?.find(item => item.visible !== false);
+  const color = paint?.color || { r: 0, g: 0, b: 0, a: 1 };
+  const size = data.font_size || 16;
+  const family = data.font_family || 'system-ui, sans-serif';
+  const weight = data.font_weight || 400;
+  const lineHeight = data.line_height || size * 1.2;
+  ctx.save();
+  ctx.fillStyle = rgba(color, paint?.opacity ?? color.a);
+  ctx.font = `${weight} ${size}px ${family}`;
+  ctx.textBaseline = 'top';
+  const lines = String(data.characters || '').split('\n');
+  lines.forEach((line, index) => ctx.fillText(line, 0, index * lineHeight, width || undefined));
+  ctx.restore();
+}
+
+function clipNode(node, width, height) {
+  const path = fallbackPath(node, width, height);
+  if (path) ctx.clip(path);
+}
+
+function fallbackPath(node, width, height) {
+  if (width <= 0 || height < 0) return null;
+  const path = new Path2D();
+  if (node.node_type === 'Ellipse') {
+    path.ellipse(width / 2, height / 2, Math.abs(width / 2), Math.abs(height / 2), 0, 0, Math.PI * 2);
+    return path;
+  }
+  if (node.node_type === 'Line') {
+    path.moveTo(0, 0); path.lineTo(width, height); return path;
+  }
+  const radii = node.corner_radii || (node.corner_radius ? { top_left: node.corner_radius, top_right: node.corner_radius, bottom_right: node.corner_radius, bottom_left: node.corner_radius } : null);
+  if (!radii || (!radii.top_left && !radii.top_right && !radii.bottom_right && !radii.bottom_left)) {
+    path.rect(0, 0, width, height);
+    return path;
+  }
+  const maxRadius = Math.min(Math.abs(width), Math.abs(height)) / 2;
+  const tl = Math.min(Math.max(radii.top_left, 0), maxRadius);
+  const tr = Math.min(Math.max(radii.top_right, 0), maxRadius);
+  const br = Math.min(Math.max(radii.bottom_right, 0), maxRadius);
+  const bl = Math.min(Math.max(radii.bottom_left, 0), maxRadius);
+  path.moveTo(tl, 0); path.lineTo(width - tr, 0); path.quadraticCurveTo(width, 0, width, tr);
+  path.lineTo(width, height - br); path.quadraticCurveTo(width, height, width - br, height);
+  path.lineTo(bl, height); path.quadraticCurveTo(0, height, 0, height - bl);
+  path.lineTo(0, tl); path.quadraticCurveTo(0, 0, tl, 0); path.closePath();
+  return path;
+}
+
+function pathFromCommands(commands, sx, sy) {
+  if (!Array.isArray(commands) || !commands.length) return null;
+  const cached = pathCache.get(commands);
+  const key = `${sx}:${sy}`;
+  if (cached?.key === key) return cached.path;
+  const path = new Path2D();
+  for (const command of commands) {
+    if (command.type === 'moveTo') path.moveTo(command.x * sx, command.y * sy);
+    else if (command.type === 'lineTo') path.lineTo(command.x * sx, command.y * sy);
+    else if (command.type === 'cubicTo') path.bezierCurveTo(command.x1 * sx, command.y1 * sy, command.x2 * sx, command.y2 * sy, command.x * sx, command.y * sy);
+    else if (command.type === 'close') path.closePath();
+  }
+  pathCache.set(commands, { key, path });
+  return path;
+}
+
+function paintStyle(paint, width, height) {
+  if (paint.paint_type === 'Solid' && paint.color) return rgba(paint.color);
+  if (!paint.stops || paint.stops.length < 2) return paint.color ? rgba(paint.color) : null;
+  const points = gradientPoints(paint.transform, paint.paint_type, width, height);
+  let gradient;
+  if (paint.paint_type === 'GradientRadial') gradient = ctx.createRadialGradient(points.start.x, points.start.y, 0, points.end.x, points.end.y, Math.max(width, height));
+  else gradient = ctx.createLinearGradient(points.start.x, points.start.y, points.end.x, points.end.y);
+  for (const stop of paint.stops) gradient.addColorStop(Math.max(0, Math.min(1, stop.position)), rgba(stop.color, stop.color.a));
+  return gradient;
+}
+
+function gradientPoints(transform, type, width, height) {
+  const canonical = type === 'GradientRadial' ? [{ x: .5, y: .5 }, { x: 1, y: .5 }] : [{ x: 0, y: .5 }, { x: 1, y: .5 }];
+  if (!transform) return { start: { x: canonical[0].x * width, y: canonical[0].y * height }, end: { x: canonical[1].x * width, y: canonical[1].y * height } };
+  const inverse = invertMatrix(transform);
+  const start = applyMatrix(inverse, canonical[0]);
+  const end = applyMatrix(inverse, canonical[1]);
+  return { start: { x: start.x * width, y: start.y * height }, end: { x: end.x * width, y: end.y * height } };
+}
+
+function invertMatrix(matrix) {
+  const determinant = matrix.m00 * matrix.m11 - matrix.m01 * matrix.m10;
+  if (!determinant) return { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
+  return {
+    m00: matrix.m11 / determinant,
+    m01: -matrix.m01 / determinant,
+    m02: (matrix.m01 * matrix.m12 - matrix.m11 * matrix.m02) / determinant,
+    m10: -matrix.m10 / determinant,
+    m11: matrix.m00 / determinant,
+    m12: (matrix.m10 * matrix.m02 - matrix.m00 * matrix.m12) / determinant
+  };
+}
+
+function applyMatrix(matrix, point) { return { x: matrix.m00 * point.x + matrix.m01 * point.y + matrix.m02, y: matrix.m10 * point.x + matrix.m11 * point.y + matrix.m12 }; }
+
+function applyShadow(effects) {
+  const effect = (effects || []).find(item => item.visible && (item.effect_type === 'DropShadow' || item.effect_type === 'InnerShadow'));
+  if (!effect) return;
+  ctx.shadowColor = effect.color ? rgba(effect.color) : 'rgba(0,0,0,.3)';
+  ctx.shadowBlur = effect.radius || 0;
+  ctx.shadowOffsetX = effect.offset?.x || 0;
+  ctx.shadowOffsetY = effect.offset?.y || 0;
+}
+
+function compositeOperation(mode) {
+  const values = { MULTIPLY: 'multiply', SCREEN: 'screen', OVERLAY: 'overlay', DARKEN: 'darken', LIGHTEN: 'lighten', COLOR_DODGE: 'color-dodge', COLOR_BURN: 'color-burn', HARD_LIGHT: 'hard-light', SOFT_LIGHT: 'soft-light', DIFFERENCE: 'difference', EXCLUSION: 'exclusion', HUE: 'hue', SATURATION: 'saturation', COLOR: 'color', LUMINOSITY: 'luminosity' };
+  return values[mode] || 'source-over';
+}
+
+function ensureImage(hash) {
+  if (!isTauri || !documentId || !hash) return null;
+  const cached = imageCache.get(hash);
+  if (cached) return cached.image;
+  if (!imageLoads.has(hash)) {
+    const generation = documentGeneration;
+    const sourceDocumentId = documentId;
+    let load;
+    load = tauri.core.invoke('get_image', { document_id: sourceDocumentId, hash }).then(bytes => new Promise((resolve, reject) => {
+      const image = new Image();
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)]));
+      image.onload = () => {
+        const current = generation === documentGeneration && sourceDocumentId === documentId && !!doc;
+        if (!current) {
+          URL.revokeObjectURL(url);
+          resolve(null);
+          return;
+        }
+        imageCache.set(hash, { image, url });
+        if (imageLoads.get(hash) === load) imageLoads.delete(hash);
+        renderCanvas();
+        resolve(image);
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        if (imageLoads.get(hash) === load) imageLoads.delete(hash);
+        reject(new Error('Image decode failed'));
+      };
+      image.src = url;
+    })).catch(error => {
+      if (imageLoads.get(hash) === load) imageLoads.delete(hash);
+      console.warn('Image fill unavailable:', hash, error);
+    });
+    imageLoads.set(hash, load);
+  }
+  return null;
 }
 
 function fitToInitialFrame() {
   if (!doc || !activePage) return;
-  const key = `${activePage.id.session_id}:${activePage.id.local_id}`;
-  const ids = doc.children_map[key] || [];
-  const first = ids.find(id => {
-    const n = nodeMap.get(id);
-    return n && n.visible && n.phase !== 'Removed' && n.size;
+  const first = (doc.children_map[nodeId(activePage.id)] || []).find(id => {
+    const node = nodeMap.get(id); return node && node.visible && node.phase !== 'Removed' && node.size;
   });
-  if (first) fitToNode(first);
-  else fitToPage();
+  if (first) fitToNode(first); else fitToPage();
 }
 
-function fitToPage() {
-  if (!doc || !activePage) return;
-  const key = `${activePage.id.session_id}:${activePage.id.local_id}`;
-  fitToNodes(doc.children_map[key] || []);
-}
+function fitToPage() { if (doc && activePage) fitToNodes(doc.children_map[nodeId(activePage.id)] || []); }
+function fitToSelection() { if (selection) fitToNode(nid(selection)); else fitToInitialFrame(); }
 
 function fitToNode(id) {
   const node = nodeMap.get(id);
   if (!node) return;
-  const parentMatrix = node.parent_id ? worldMatrix(nodeId(node.parent_id)) : null;
-  const bounds = nodeBounds(id, parentMatrix);
+  const parent = node.parent_id ? worldMatrix(nodeId(node.parent_id)) : null;
+  const bounds = nodeBounds(id, parent);
   if (bounds) fitToBounds(bounds);
-}
-
-function centerOnNode(id) {
-  const node = nodeMap.get(id);
-  if (!node) return;
-  const parentMatrix = node.parent_id ? worldMatrix(nodeId(node.parent_id)) : null;
-  const bounds = nodeBounds(id, parentMatrix);
-  if (bounds) centerOnBounds(bounds);
-}
-
-function focusBounds() {
-  if (selection) {
-    const parentMatrix = selection.parent_id ? worldMatrix(nodeId(selection.parent_id)) : null;
-    const selectedBounds = nodeBounds(nid(selection), parentMatrix);
-    if (selectedBounds) return selectedBounds;
-  }
-  const key = activePage ? `${activePage.id.session_id}:${activePage.id.local_id}` : '';
-  const first = (doc?.children_map[key] || []).find(id => {
-    const n = nodeMap.get(id);
-    return n && n.visible && n.phase !== 'Removed' && n.size;
-  });
-  if (!first) return null;
-  return nodeBounds(first, null);
-}
-
-function centerOnBounds(bounds) {
-  const width = document.getElementById('canvas-wrap').clientWidth;
-  const height = document.getElementById('canvas-wrap').clientHeight;
-  if (width <= 0 || height <= 0) {
-    requestAnimationFrame(() => centerOnBounds(bounds));
-    return;
-  }
-  ox = width / 2 - (bounds.x + bounds.width / 2) * zoom;
-  oy = height / 2 - (bounds.y + bounds.height / 2) * zoom;
-  renderCanvas();
-}
-
-function setZoomCentered(nextZoom) {
-  zoom = nextZoom;
-  const bounds = focusBounds();
-  if (bounds) centerOnBounds(bounds);
-  else renderCanvas();
-}
-
-function worldMatrix(id, seen = new Set()) {
-  if (seen.has(id)) return null;
-  seen.add(id);
-  const node = nodeMap.get(id);
-  if (!node) return null;
-  const parent = node.parent_id ? worldMatrix(nodeId(node.parent_id), seen) : null;
-  return multiplyMatrix(parent, node.transform);
 }
 
 function fitToNodes(ids) {
@@ -387,27 +588,70 @@ function fitToNodes(ids) {
 }
 
 function fitToBounds(bounds) {
-  const width = document.getElementById('canvas-wrap').clientWidth;
-  const height = document.getElementById('canvas-wrap').clientHeight;
-  if (width <= 0 || height <= 0) {
-    requestAnimationFrame(() => fitToBounds(bounds));
-    return;
-  }
-  const padding = 32;
+  const width = wrap.clientWidth;
+  const height = wrap.clientHeight;
+  if (!width || !height) { requestAnimationFrame(() => fitToBounds(bounds)); return; }
   const contentWidth = Math.max(bounds.width, 1);
   const contentHeight = Math.max(bounds.height, 1);
-  zoom = Math.min((width - padding * 2) / contentWidth, (height - padding * 2) / contentHeight, 2);
-  zoom = Math.max(0.01, zoom);
-  ox = (width - contentWidth * zoom) / 2 - bounds.x * zoom;
-  oy = (height - contentHeight * zoom) / 2 - bounds.y * zoom;
+  zoom = clamp(Math.min((width - 64) / contentWidth, (height - 64) / contentHeight, 4), .02, 4);
+  panX = (width - contentWidth * zoom) / 2 - bounds.x * zoom;
+  panY = (height - contentHeight * zoom) / 2 - bounds.y * zoom;
   renderCanvas();
 }
 
+function centerOnNode(id) {
+  const node = nodeMap.get(id);
+  if (!node) return;
+  const parent = node.parent_id ? worldMatrix(nodeId(node.parent_id)) : null;
+  const bounds = nodeBounds(id, parent);
+  if (bounds) centerOnBounds(bounds);
+}
+
+function centerOnBounds(bounds) {
+  if (!wrap.clientWidth || !wrap.clientHeight) { requestAnimationFrame(() => centerOnBounds(bounds)); return; }
+  panX = wrap.clientWidth / 2 - (bounds.x + bounds.width / 2) * zoom;
+  panY = wrap.clientHeight / 2 - (bounds.y + bounds.height / 2) * zoom;
+  renderCanvas();
+}
+
+function setZoomCentered(nextZoom) {
+  const focus = focusPoint();
+  zoom = clamp(nextZoom, .02, 16);
+  panX = wrap.clientWidth / 2 - focus.x * zoom;
+  panY = wrap.clientHeight / 2 - focus.y * zoom;
+  renderCanvas();
+}
+
+function zoomAt(screenX, screenY, nextZoom) {
+  const worldX = (screenX - panX) / zoom;
+  const worldY = (screenY - panY) / zoom;
+  zoom = clamp(nextZoom, .02, 16);
+  panX = screenX - worldX * zoom;
+  panY = screenY - worldY * zoom;
+  renderCanvas();
+}
+
+function focusPoint() {
+  const bounds = selection ? nodeBounds(nid(selection), selection.parent_id ? worldMatrix(nodeId(selection.parent_id)) : null) : null;
+  if (bounds) return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+  const first = doc && activePage ? (doc.children_map[nodeId(activePage.id)] || [])[0] : null;
+  const firstBounds = first ? nodeBounds(first, null) : null;
+  return firstBounds ? { x: firstBounds.x + firstBounds.width / 2, y: firstBounds.y + firstBounds.height / 2 } : { x: 0, y: 0 };
+}
+
+function worldMatrix(id, seen = new Set()) {
+  if (seen.has(id)) return null;
+  seen.add(id);
+  const node = nodeMap.get(id);
+  if (!node) return null;
+  return multiplyMatrix(node.parent_id ? worldMatrix(nodeId(node.parent_id), seen) : null, node.transform);
+}
+
 function nodeBounds(id, parentMatrix) {
-  const n = nodeMap.get(id);
-  if (!n || !n.visible || n.phase === 'Removed') return null;
-  const matrix = multiplyMatrix(parentMatrix, n.transform);
-  const size = n.size || { x: 0, y: 0 };
+  const node = nodeMap.get(id);
+  if (!node || !node.visible || node.phase === 'Removed') return null;
+  const matrix = multiplyMatrix(parentMatrix, node.transform);
+  const size = node.size || { x: 0, y: 0 };
   let bounds = rectBounds(matrix, size.x, size.y);
   for (const child of doc.children_map[id] || []) bounds = mergeBounds(bounds, nodeBounds(child, matrix));
   return bounds;
@@ -416,120 +660,120 @@ function nodeBounds(id, parentMatrix) {
 function multiplyMatrix(parent, local) {
   if (!parent) return local || { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
   if (!local) return parent;
-  return {
-    m00: parent.m00 * local.m00 + parent.m01 * local.m10,
-    m01: parent.m00 * local.m01 + parent.m01 * local.m11,
-    m02: parent.m00 * local.m02 + parent.m01 * local.m12 + parent.m02,
-    m10: parent.m10 * local.m00 + parent.m11 * local.m10,
-    m11: parent.m10 * local.m01 + parent.m11 * local.m11,
-    m12: parent.m10 * local.m02 + parent.m11 * local.m12 + parent.m12
-  };
+  return { m00: parent.m00 * local.m00 + parent.m01 * local.m10, m01: parent.m00 * local.m01 + parent.m01 * local.m11, m02: parent.m00 * local.m02 + parent.m01 * local.m12 + parent.m02, m10: parent.m10 * local.m00 + parent.m11 * local.m10, m11: parent.m10 * local.m01 + parent.m11 * local.m11, m12: parent.m10 * local.m02 + parent.m11 * local.m12 + parent.m12 };
 }
 
 function rectBounds(matrix, width, height) {
-  const points = [[0, 0], [width, 0], [0, height], [width, height]];
-  const transformed = points.map(([x, y]) => ({
-    x: matrix.m00 * x + matrix.m01 * y + matrix.m02,
-    y: matrix.m10 * x + matrix.m11 * y + matrix.m12
-  }));
-  return {
-    x: Math.min(...transformed.map(p => p.x)),
-    y: Math.min(...transformed.map(p => p.y)),
-    width: Math.max(...transformed.map(p => p.x)) - Math.min(...transformed.map(p => p.x)),
-    height: Math.max(...transformed.map(p => p.y)) - Math.min(...transformed.map(p => p.y))
-  };
+  const points = [[0, 0], [width, 0], [0, height], [width, height]].map(([x, y]) => applyMatrix(matrix, { x, y }));
+  const xs = points.map(point => point.x); const ys = points.map(point => point.y);
+  const x = Math.min(...xs); const y = Math.min(...ys);
+  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
 }
 
 function mergeBounds(a, b) {
-  if (!a) return b;
-  if (!b) return a;
-  const x = Math.min(a.x, b.x);
-  const y = Math.min(a.y, b.y);
-  const right = Math.max(a.x + a.width, b.x + b.width);
-  const bottom = Math.max(a.y + a.height, b.y + b.height);
-  return { x, y, width: right - x, height: bottom - y };
+  if (!a) return b; if (!b) return a;
+  const x = Math.min(a.x, b.x); const y = Math.min(a.y, b.y);
+  return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
 }
 
 function renderProps() {
-  const el = document.getElementById('props');
-  if (!selection) { el.innerHTML = ''; return; }
-  const n = selection;
-  let h = `<div class="pg"><div class="pl">Name</div><div class="pv">${esc(n.name)}</div></div>`;
-  h += `<div class="pg"><div class="pl">Type</div><div class="pv">${n.node_type}</div></div>`;
-  if (n.size) h += `<div class="pg"><div class="pl">Size</div><div class="pv">W:${f(n.size.x)} H:${f(n.size.y)}</div></div>`;
-  if (n.transform) h += `<div class="pg"><div class="pl">Position</div><div class="pv">X:${f(n.transform.m02)} Y:${f(n.transform.m12)}</div></div>`;
-  h += `<div class="pg"><div class="pl">Opacity</div><div class="pv">${(n.opacity*100)|0}%</div></div>`;
-  for (const p of n.fill_paints||[]) {
-    if (p.paint_type === 'Solid' && p.color) h += `<div class="pg"><div class="pl">Fill</div><div class="pv"><span class="swatch" style="background:${rgba(p.color)}"></span>${rgba(p.color)}</div></div>`;
-  }
-  if (n.stroke_weight > 0) h += `<div class="pg"><div class="pl">Stroke</div><div class="pv">${f(n.stroke_weight)}px</div></div>`;
-  if (n.corner_radius) h += `<div class="pg"><div class="pl">Corner</div><div class="pv">${f(n.corner_radius)}</div></div>`;
-  if (n.text_data) {
-    const td = n.text_data;
-    h += `<div class="pg"><div class="pl">Font</div><div class="pv">${td.font_family||'—'} ${td.font_weight} ${f(td.font_size)}px</div></div>`;
-  }
-  el.innerHTML = h;
+  const element = document.getElementById('props');
+  if (!selection) { element.innerHTML = ''; return; }
+  const node = selection;
+  let html = `<div class="pg"><div class="pl">Name</div><div class="pv">${esc(node.name)}</div></div>`;
+  html += `<div class="pg"><div class="pl">Type</div><div class="pv">${node.node_type}</div></div>`;
+  if (node.size) html += `<div class="pg"><div class="pl">Size</div><div class="pv">W:${f(node.size.x)} H:${f(node.size.y)}</div></div>`;
+  if (node.transform) html += `<div class="pg"><div class="pl">Position</div><div class="pv">X:${f(node.transform.m02)} Y:${f(node.transform.m12)}</div></div>`;
+  html += `<div class="pg"><div class="pl">Opacity</div><div class="pv">${Math.round((node.opacity || 0) * 100)}%</div></div>`;
+  if (node.fill_geometry?.length || node.vector_geometry?.paths?.length) html += `<div class="pg"><div class="pl">Geometry</div><div class="pv">${(node.fill_geometry?.length || node.vector_geometry?.paths?.length || 0)} baked path(s)</div></div>`;
+  for (const paint of node.fill_paints || []) if (paint.paint_type === 'Solid' && paint.color) html += `<div class="pg"><div class="pl">Fill</div><div class="pv"><span class="swatch" style="background:${rgba(paint.color)}"></span>${rgba(paint.color)}</div></div>`;
+  if (node.stroke_weight > 0) html += `<div class="pg"><div class="pl">Stroke</div><div class="pv">${f(node.stroke_weight)}px</div></div>`;
+  if (node.corner_radius) html += `<div class="pg"><div class="pl">Corner</div><div class="pv">${f(node.corner_radius)}</div></div>`;
+  if (node.text_data) html += `<div class="pg"><div class="pl">Font</div><div class="pv">${esc(node.text_data.font_family || '-')} ${node.text_data.font_weight} ${f(node.text_data.font_size)}px</div></div>`;
+  element.innerHTML = html;
 }
 
-// ── Utilities ──
-function nodeId(value) {
-  if (typeof value === 'string') return value;
-  return value && Number.isFinite(value.session_id) && Number.isFinite(value.local_id)
-    ? `${value.session_id}:${value.local_id}`
-    : '';
-}
-function nid(n) { return nodeId(n.guid); }
-function rgba(c, a) { return `rgba(${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0},${a??c.a})`; }
-function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
-function f(v) { return Math.round(v*100)/100; }
+function nodeId(value) { return typeof value === 'string' ? value : value && Number.isFinite(value.session_id) && Number.isFinite(value.local_id) ? `${value.session_id}:${value.local_id}` : ''; }
+function nid(node) { return nodeId(node.guid); }
+function sameId(a, b) { return !!a && !!b && nodeId(a) === nodeId(b); }
+function rgba(color, alpha) { return `rgba(${Math.round(color.r * 255)},${Math.round(color.g * 255)},${Math.round(color.b * 255)},${alpha ?? color.a ?? 1})`; }
+function esc(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function f(value) { return Math.round((Number(value) || 0) * 100) / 100; }
+function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 
-// ── Zoom & keyboard ──
+function openGuide() { document.getElementById('guide-backdrop').classList.add('open'); document.getElementById('guide-close').focus(); }
+function closeGuide() { document.getElementById('guide-backdrop').classList.remove('open'); }
+
 document.getElementById('open-file').onclick = openDialog;
-document.getElementById('tab-bar').addEventListener('click', e => {
-  if (e.target.closest('[data-close-tab]')) closeTab();
-});
-document.getElementById('canvas-wrap').addEventListener('wheel', e => { e.preventDefault(); const f = e.deltaY < 0 ? 1.12 : 0.9; zoom = Math.max(0.01, Math.min(zoom * f, 8)); renderCanvas(); });
-document.getElementById('zin').onclick = () => { zoom = Math.min(zoom*1.25, 8); renderCanvas(); };
-document.getElementById('zout').onclick = () => { zoom = Math.max(zoom*0.8, 0.01); renderCanvas(); };
 document.getElementById('fit').onclick = fitToPage;
+document.getElementById('fit-selection').onclick = fitToSelection;
+document.getElementById('zin').onclick = () => zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, zoom * 1.25);
+document.getElementById('zout').onclick = () => zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, zoom * .8);
 document.getElementById('z100').onclick = () => setZoomCentered(1);
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey||e.metaKey) && e.key === 'o') { e.preventDefault(); openDialog(); }
-  if (e.key === '+'||e.key === '=') { zoom = Math.min(zoom*1.25, 8); renderCanvas(); }
-  if (e.key === '-') { zoom = Math.max(zoom*0.8, 0.01); renderCanvas(); }
-  if (e.key === '1' && !e.ctrlKey) { setZoomCentered(1); }
-  if (e.key === '0' && !e.ctrlKey) { setZoomCentered(1); }
-  if (e.key === 'Escape') { selection = null; renderAll(); }
+document.getElementById('guide-button').onclick = openGuide;
+document.getElementById('guide-close').onclick = closeGuide;
+document.getElementById('guide-backdrop').onclick = event => { if (event.target.id === 'guide-backdrop') closeGuide(); };
+document.getElementById('tab-bar').addEventListener('click', event => { if (event.target.closest('[data-close-tab]')) closeTab(); });
+
+wrap.addEventListener('wheel', event => {
+  event.preventDefault();
+  const rect = wrap.getBoundingClientRect();
+  const pointX = event.clientX - rect.left;
+  const pointY = event.clientY - rect.top;
+  zoomAt(pointX, pointY, zoom * (event.deltaY < 0 ? 1.12 : .89));
+}, { passive: false });
+wrap.addEventListener('contextmenu', event => event.preventDefault());
+wrap.addEventListener('pointerdown', event => {
+  if (event.button === 1 || event.button === 2 || (event.button === 0 && spaceDown)) {
+    event.preventDefault();
+    panGesture = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    wrap.classList.add('panning');
+    wrap.setPointerCapture(event.pointerId);
+  }
 });
+wrap.addEventListener('pointermove', event => {
+  if (!panGesture || panGesture.pointerId !== event.pointerId) return;
+  panX += event.clientX - panGesture.x;
+  panY += event.clientY - panGesture.y;
+  panGesture.x = event.clientX;
+  panGesture.y = event.clientY;
+  renderCanvas();
+});
+function endPan(event) { if (panGesture?.pointerId === event.pointerId) { panGesture = null; wrap.classList.remove('panning'); } }
+wrap.addEventListener('pointerup', endPan);
+wrap.addEventListener('pointercancel', endPan);
 
-// ── Resize ──
-new ResizeObserver(() => renderCanvas()).observe(document.getElementById('canvas-wrap'));
+document.addEventListener('keydown', event => {
+  if (event.target && ['INPUT', 'TEXTAREA'].includes(event.target.tagName)) return;
+  if (event.code === 'Space') { spaceDown = true; event.preventDefault(); }
+  if (event.key === '?' || (event.shiftKey && event.key === '/')) { event.preventDefault(); openGuide(); return; }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') { event.preventDefault(); openDialog(); return; }
+  if (event.key === 'Escape') { if (document.getElementById('guide-backdrop').classList.contains('open')) closeGuide(); else { selection = null; renderAll(); } return; }
+  if (event.key === '+' || event.key === '=') { zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, zoom * 1.25); return; }
+  if (event.key === '-') { zoomAt(wrap.clientWidth / 2, wrap.clientHeight / 2, zoom * .8); return; }
+  if (event.key === '0') { fitToPage(); return; }
+  if (event.key === '1') { setZoomCentered(1); return; }
+  if (event.key === '2') { fitToSelection(); }
+});
+document.addEventListener('keyup', event => { if (event.code === 'Space') { spaceDown = false; event.preventDefault(); } });
+new ResizeObserver(() => renderCanvas()).observe(wrap);
 
-// ── Drag & drop ──
 if (tauri?.event?.listen) {
-  // Tauri owns native file drops and supplies absolute paths on Windows.
   tauri.event.listen('tauri://drag-drop', event => {
     const paths = event.payload?.paths;
     const path = Array.isArray(paths) ? paths.find(item => typeof item === 'string' && item.toLowerCase().endsWith('.fig')) : null;
-    if (path) void loadFromPath(path);
-    else if (Array.isArray(paths) && paths.length) showError('Drop a .fig file here');
+    if (path) void loadFromPath(path); else if (Array.isArray(paths) && paths.length) showError('Drop a .fig file here');
   }).catch(error => console.error('Tauri drag-drop listener failed:', error));
 } else {
-  // Browser fallback when the HTML file is opened outside Tauri.
-  document.body.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
-  document.body.addEventListener('drop', async e => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.name.toLowerCase().endsWith('.fig')) await loadFromFile(file);
-    else showError('Drop a .fig file here');
+  document.body.addEventListener('dragover', event => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; });
+  document.body.addEventListener('drop', async event => {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file && file.name.toLowerCase().endsWith('.fig')) await loadFromFile(file); else showError('Drop a .fig file here');
   });
 }
 
-if (isTauri) {
-  tauri.core.invoke('take_startup_path')
-    .then(path => { if (typeof path === 'string' && path.length > 0) return loadFromPath(path); })
-    .catch(error => console.error('Startup file check failed:', error));
-}
+if (isTauri) tauri.core.invoke('take_startup_path').then(path => { if (typeof path === 'string' && path.length) return loadFromPath(path); }).catch(error => console.error('Startup file check failed:', error));
 </script>
 </body>
 </html>

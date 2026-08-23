@@ -84,6 +84,27 @@ fn image_hashes_present() {
 
 #[test]
 #[ignore = "requires FIG_VIEWER_SAMPLE_FIG or the local sample file"]
+fn image_paints_reference_embedded_images() {
+    let Some(doc) = load() else { return };
+    let embedded: std::collections::HashSet<_> = doc.image_hashes.iter().cloned().collect();
+    let image_paints: Vec<_> = doc
+        .nodes
+        .iter()
+        .flat_map(|node| node.fill_paints.iter().chain(node.stroke_paints.iter()))
+        .filter_map(|paint| paint.image_hash.as_ref())
+        .collect();
+    assert!(
+        !image_paints.is_empty(),
+        "expected image fills in the sample"
+    );
+    assert!(
+        image_paints.iter().all(|hash| embedded.contains(*hash)),
+        "every image paint should reference an embedded archive image"
+    );
+}
+
+#[test]
+#[ignore = "requires FIG_VIEWER_SAMPLE_FIG or the local sample file"]
 fn fills_and_strokes_populated() {
     let Some(doc) = load() else { return };
     let mut with_fills = 0;
@@ -143,6 +164,47 @@ fn gradient_stops_have_valid_positions() {
             }
         }
     }
+}
+
+#[test]
+#[ignore = "requires FIG_VIEWER_SAMPLE_FIG or the local sample file"]
+fn baked_geometry_decodes() {
+    let Some(doc) = load() else { return };
+    let fill_paths: usize = doc.nodes.iter().map(|node| node.fill_geometry.len()).sum();
+    let stroke_paths: usize = doc
+        .nodes
+        .iter()
+        .map(|node| node.stroke_geometry.len())
+        .sum();
+    let vector_nodes = doc
+        .nodes
+        .iter()
+        .filter(|node| {
+            node.vector_geometry
+                .as_ref()
+                .is_some_and(|geometry| !geometry.paths.is_empty())
+        })
+        .count();
+    assert!(
+        fill_paths > 1000,
+        "expected baked fill paths, got {}",
+        fill_paths
+    );
+    assert!(
+        stroke_paths > 100,
+        "expected baked stroke paths, got {}",
+        stroke_paths
+    );
+    assert!(
+        vector_nodes > 100,
+        "expected vector-network fallbacks, got {}",
+        vector_nodes
+    );
+    assert!(doc
+        .nodes
+        .iter()
+        .flat_map(|node| node.fill_geometry.iter())
+        .all(|path| !path.commands.is_empty()));
 }
 
 #[test]
