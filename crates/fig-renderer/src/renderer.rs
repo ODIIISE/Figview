@@ -2,12 +2,25 @@
 
 use crate::camera::Camera;
 use crate::scene::SceneGraph;
+use std::collections::HashMap;
+
+/// A decoded image ready for GPU upload.
+#[derive(Debug, Clone)]
+pub struct DecodedImage {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
+}
 
 /// Commands sent from the frontend to control rendering.
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
     /// Load a new document scene.
     LoadScene(SceneGraph),
+    /// Upload decoded images (hash → pixels) for image fills.
+    LoadImages(HashMap<String, DecodedImage>),
+    /// Unload the current scene (all documents closed).
+    ClearScene,
     /// Switch to a specific page (by index into scene_graph.pages).
     SetPage(usize),
     /// Set the current zoom level.

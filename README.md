@@ -20,7 +20,8 @@ Open `.fig` files locally, inspect pages and layers, and view designs on a canva
 ## Architecture
 
 ```
-.fig file (ZIP) → Rust parser (kiwi-schema) → Document model → Canvas 2D renderer
+.fig file (ZIP) → Rust parser (kiwi-schema) → Scene graph → wgpu GPU renderer → canvas blit
+                                                                     ↘ text/selection overlay (browser fonts)
 ```
 
 | Component | Technology |
@@ -28,7 +29,8 @@ Open `.fig` files locally, inspect pages and layers, and view designs on a canva
 | `.fig` parser | Rust (`fig-parser` crate) |
 | Binary protocol | `kiwi-schema` (Evan Wallace, MIT) |
 | Desktop shell | Tauri 2.x |
-| UI rendering | HTML5 Canvas 2D + Vanilla TypeScript |
+| Scene rendering | `wgpu` offscreen GPU pipeline (`fig-renderer` crate), raw RGBA frames over binary IPC |
+| Text + selection overlay | HTML5 Canvas 2D + Vanilla TypeScript (`src/ui.js`) |
 | Windows distribution | Portable `fig-viewer.exe` |
 
 ## Project Structure

@@ -1,16 +1,17 @@
-//! GPU texture management for images and glyph atlases.
+//! GPU texture management for image fills.
 
 use std::collections::HashMap;
 
-/// Manages GPU textures for image fills and glyph atlases.
-pub struct TextureManager {
-    textures: HashMap<String, GpuTexture>,
-    sampler: wgpu::Sampler,
+/// A GPU texture plus the bind group needed to draw it with the image
+/// pipeline (scene uniform at binding 0, texture at 1, sampler at 2).
+pub struct ImageBinding {
+    pub bind_group: wgpu::BindGroup,
 }
 
-struct GpuTexture {
-    texture: wgpu::Texture,
-    view: wgpu::TextureView,
+/// Manages GPU textures for image fills.
+pub struct TextureManager {
+    textures: HashMap<String, ImageBinding>,
+    sampler: wgpu::Sampler,
 }
 
 impl TextureManager {
@@ -32,10 +33,9 @@ impl TextureManager {
         }
     }
 
-    /// Upload raw image bytes as an RGBA8 texture.
+    /// Upload decoded RGBA8 pixels as a texture and create its bind group.
     /// `hash` is the image's Figma hash string, used for caching.
-    /// `width` and `height` are the decoded image dimensions.
-    /// `rgba_pixels` is the raw RGBA pixel data.
+    #[allow(clippy::too_many_arguments)]
     pub fn upload(
         &mut self,
         hash: &str,
@@ -44,9 +44,14 @@ impl TextureManager {
         rgba_pixels: &[u8],
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-    ) -> Option<&wgpu::TextureView> {
+        image_bind_group_layout: &wgpu::BindGroupLayout,
+        scene_uniform_buffer: &wgpu::Buffer,
+    ) -> Option<&ImageBinding> {
+        if rgba_pixels.is_empty() || width == 0 || height == 0 {
+            return None;
+        }
         if self.textures.contains_key(hash) {
-            return Some(&self.textures[hash].view);
+            return self.textures.get(hash);
         }
 
         let texture_size = wgpu::Extent3d {
@@ -84,15 +89,33 @@ impl TextureManager {
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.textures
-            .insert(hash.to_string(), GpuTexture { texture, view });
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(&format!("image_bind_group_{}", hash)),
+            layout: image_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: scene_uniform_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
+                },
+            ],
+        });
 
-        Some(&self.textures[hash].view)
+        self.textures
+            .insert(hash.to_string(), ImageBinding { bind_group });
+        self.textures.get(hash)
     }
 
-    /// Get the global sampler.
-    pub fn sampler(&self) -> &wgpu::Sampler {
-        &self.sampler
+    /// Get the bind group for an uploaded texture, if present.
+    pub fn get(&self, hash: &str) -> Option<&ImageBinding> {
+        self.textures.get(hash)
     }
 
     /// Check if a texture is cached.

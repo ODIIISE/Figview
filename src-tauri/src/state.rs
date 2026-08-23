@@ -11,9 +11,14 @@ pub enum DocumentSource {
 }
 
 pub struct DocumentEntry {
+    /// Kept so documents can be re-read from their origin later.
+    #[allow(dead_code)]
     pub source: DocumentSource,
     pub document: FigDocument,
     pub scene_graph: SceneGraph,
+    /// Raw (compressed) image bytes keyed by Figma image hash, extracted
+    /// once at open time so images never require re-reading the archive.
+    pub image_bytes: Arc<HashMap<String, Vec<u8>>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -21,6 +26,7 @@ pub struct TabInfo {
     pub document_id: String,
     pub path: String,
     pub name: String,
+    pub active_page: usize,
 }
 
 /// Lightweight layer tree node sent to the frontend.
@@ -31,7 +37,36 @@ pub struct LayerTreeNode {
     pub node_type: String,
     pub visible: bool,
     pub opacity: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bounds: Option<BoundsDto>,
     pub children: Vec<LayerTreeNode>,
+}
+
+/// Axis-aligned world-space bounding box.
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub struct BoundsDto {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+/// A text node rendered by the frontend overlay.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TextItem {
+    pub id: String,
+    pub characters: String,
+    pub font_family: Option<String>,
+    pub font_size: f32,
+    pub font_weight: f32,
+    pub line_height: Option<f32>,
+    pub color: [f32; 4],
+    pub opacity: f32,
+    /// World-space position of the first glyph baseline origin box.
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
 }
 
 /// Metadata for a loaded document (no scene data).
@@ -93,6 +128,18 @@ impl AppState {
     }
 }
 
+fn bounds_dto(rect: &fig_renderer::transforms::Rect) -> Option<BoundsDto> {
+    if rect.is_empty() {
+        return None;
+    }
+    Some(BoundsDto {
+        x: rect.min_x,
+        y: rect.min_y,
+        w: rect.width(),
+        h: rect.height(),
+    })
+}
+
 /// Build a lightweight layer tree from a scene graph page.
 pub fn build_layer_tree(scene_graph: &SceneGraph, page_index: usize) -> Vec<LayerTreeNode> {
     let tree = match scene_graph.trees.get(page_index) {
@@ -125,6 +172,7 @@ fn build_layer_node(
         node_type: format!("{:?}", node.node_type),
         visible: node.visible,
         opacity: node.opacity,
+        bounds: node.bounds.and_then(|b| bounds_dto(&b)),
         children,
     })
 }
