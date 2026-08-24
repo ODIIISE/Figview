@@ -89,7 +89,7 @@ entirely**, making `.fig` irrelevant the way `.psd` receded. Counter-strategy:
 | **P3 3D Pipeline** | "Place real 3D in your UI designs" | Import glTF/GLB/USDZ; orbit/place/light in canvas; PBR-lite materials; render-to-layer compositing with 2D scenes; export stills & turntables |
 | **P4 Shaders & Materials** | "Infinite effects, not eight canned blurs" | Node-based material editor; WGSL/GLSL shader layers with live preview through the same raster pipeline; safe sandboxed execution; shareable material packs |
 | **P5 Local-first Collaboration** | "Multiplayer when you want it, Git when you don't" | CRDT sync (optional relay, self-hostable); plain-text chunked format → branch/diff/merge in-app; comment threads anchored to geometry |
-| **P6 AI Copilot (private)** | "Assistance without surveillance" | On-device models (layout cleanup, naming, alt-text, variant gen, text→edit ops); BYO-key cloud adapters clearly labeled; training data: never you |
+| **P6 AI Copilot (private)** | "A scenario-based assistant in every corner" | **Deferred integration, reserved hooks (D-011).** Principle: the assistant is *contextual* — on canvas it assists drawing, in layer tree it assists organizing, in inspector it explains properties, in export dialog it fixes web-output issues, per page it reports problems. Architecture ships the seams now: every surface exposes a context snapshot + all actions flow through the serializable command bus, so any future agent (local model or BYO-key API) plugs in per-scenario without refactor. Local-first always; cloud calls opt-in and labeled |
 | **P7 Platform** | "An ecosystem, not an app" | WASM plugin API (wasmtime sandbox), CLI (`fig` command), headless render farm mode |
 | **P8 Publish to Web** | "Every canvas becomes a real website" | Framer/Webflow-class export & publishing (see §4b) |
 
@@ -158,9 +158,10 @@ developer — "View Source should not embarrass us."
 Non-negotiables:
 - **Every crate headless-runnable.** If it can't be CLI-tested, it's wrong.
 - **Format before features.** `fig-format` ships stable in Phase B; losing the format means losing the moat.
-- **Editing = commands.** All mutations are serializable, replayable commands (property-testable, gives undo for free, later drives collab).
+- **Editing = commands.** All mutations are serializable, replayable commands (property-testable, gives undo for free, later drives collab — **and makes any future AI agent just another command producer**, see D-011).
 - **Renderer trait stays narrow.** CPU/GPU swap remains a config choice forever.
 - **Dual representation (web-export contract, §4b).** The scene exists twice: a *render-optimized* draw list (what the canvas rasterizes) and the *semantic document tree* (layout, text runs, styles, hierarchy). Renderers consume only the former; **P8 export consumes only the latter.** Baking text to paths or flattening layout in the model is forbidden — it would make Framer-class web export impossible later.
+- **AI seams without AI code (D-011).** Reserve a `fig-assist` crate slot defining two traits from Phase A onward: `ContextProvider` (what each surface knows: selection, page diagnostics, layer metadata) and `ScenarioRegistry` (per-surface assistant scenarios). No model, no API calls ship until Phase 7 — but no refactor either.
 
 ### 5.2 Lifecycle & support policy
 
