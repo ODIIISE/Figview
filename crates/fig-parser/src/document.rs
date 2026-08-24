@@ -2,13 +2,17 @@
 
 use crate::error::ParseError;
 use crate::geometry;
-use crate::kiwi::KiwiMessage;
 use crate::nodes;
 use crate::types::*;
+use kiwi_schema::Value;
+use rayon::prelude::*;
 use std::collections::HashMap;
 
+/// Build the document directly from the decoded kiwi root value —
+/// no intermediate JSON representation, nodes extracted in parallel.
 pub fn build_document(
-    msg: KiwiMessage,
+    root: &Value,
+    schema_def_count: usize,
     meta: &serde_json::Value,
     thumbnail: &[u8],
     images: &HashMap<String, Vec<u8>>,
@@ -25,18 +29,31 @@ pub fn build_document(
         .or_else(|| meta.get("file_id"))
         .and_then(|v| v.as_str())
         .map(str::to_string);
-    let schema_def_count = msg.schema_def_count;
-    let blobs = msg.root.blobs;
 
-    let mut nodes: Vec<FigNode> = Vec::with_capacity(msg.root.node_changes.len());
+    let node_changes: &[Value] = match nodes::get(root, "nodeChanges").and_then(nodes::as_array_ref)
+    {
+        Some(a) => a,
+        None => &[],
+    };
+    let blobs = extract_blobs(root);
+
+    // Extract every node in parallel; each change is independent.
+    let extracted: Vec<(FigNode, Option<(NodeId, String)>)> = node_changes
+        .par_iter()
+        .map(|raw| {
+            let node = extract_node(raw, &blobs);
+            let parent = nodes::get_parent_index(raw);
+            (node, parent)
+        })
+        .collect();
+
+    let mut nodes: Vec<FigNode> = Vec::with_capacity(extracted.len());
     let mut parent_refs: Vec<(usize, NodeId, String)> = Vec::new();
-
-    for raw in &msg.root.node_changes {
-        let idx = nodes.len();
-        nodes.push(extract_node(raw, &blobs));
-        if let Some((pid, pos)) = nodes::get_parent_index(raw) {
+    for (idx, (node, parent)) in extracted.into_iter().enumerate() {
+        if let Some((pid, pos)) = parent {
             parent_refs.push((idx, pid, pos));
         }
+        nodes.push(node);
     }
 
     let mut children_map: HashMap<String, Vec<String>> = HashMap::new();
@@ -100,55 +117,39 @@ pub fn build_document(
     })
 }
 
-fn extract_node(raw: &serde_json::Value, blobs: &[Vec<u8>]) -> FigNode {
+fn extract_node(raw: &Value, blobs: &[Vec<u8>]) -> FigNode {
+    let type_str = || nodes::as_str_of(raw, "type");
+    let str_field = |name: &str| nodes::get(raw, name).and_then(|v| nodes::as_str_of_v(v));
+    let num_field = |name: &str| nodes::get(raw, name).and_then(|v| nodes::as_f64_v(v));
+    let bool_field = |name: &str| nodes::get(raw, name).and_then(|v| nodes::as_bool_v(v));
+
     FigNode {
         guid: nodes::get_guid(raw, "guid"),
-        node_type: raw
-            .get("type")
-            .and_then(|v| v.as_str())
+        node_type: type_str()
             .map(NodeType::from_str)
             .unwrap_or(NodeType::Unknown),
-        name: raw
-            .get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string(),
-        phase: raw
-            .get("phase")
-            .and_then(|v| v.as_str())
-            .and_then(|s| match s {
-                "CREATED" => Some(NodePhase::Created),
-                "REMOVED" => Some(NodePhase::Removed),
-                _ => None,
-            }),
+        name: str_field("name").unwrap_or("").to_string(),
+        phase: str_field("phase").and_then(|s| match s {
+            "CREATED" => Some(NodePhase::Created),
+            "REMOVED" => Some(NodePhase::Removed),
+            _ => None,
+        }),
         parent_id: None,
         position: None,
-        visible: raw.get("visible").and_then(|v| v.as_bool()).unwrap_or(true),
-        opacity: raw.get("opacity").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
-        locked: raw.get("locked").and_then(|v| v.as_bool()).unwrap_or(false),
+        visible: bool_field("visible").unwrap_or(true),
+        opacity: num_field("opacity").unwrap_or(1.0) as f32,
+        locked: bool_field("locked").unwrap_or(false),
         size: nodes::get_vector(raw, "size"),
         transform: nodes::get_matrix(raw, "transform"),
-        corner_radius: raw
-            .get("cornerRadius")
-            .and_then(|v| v.as_f64())
-            .map(|v| v as f32),
+        corner_radius: num_field("cornerRadius").map(|v| v as f32),
         corner_radii: nodes::get_corner_radii(raw),
         clips_content: nodes::get_clips_content(raw),
-        blend_mode: raw
-            .get("blendMode")
-            .and_then(|v| v.as_str())
-            .unwrap_or("PASS_THROUGH")
-            .to_string(),
+        blend_mode: str_field("blendMode").unwrap_or("PASS_THROUGH").to_string(),
         fill_paints: nodes::get_paints(raw, "fillPaints"),
         background_paints: nodes::get_paints(raw, "backgroundPaints"),
         stroke_paints: nodes::get_paints(raw, "strokePaints"),
-        stroke_weight: raw
-            .get("strokeWeight")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32,
-        stroke_align: raw
-            .get("strokeAlign")
-            .and_then(|v| v.as_str())
+        stroke_weight: num_field("strokeWeight").unwrap_or(0.0) as f32,
+        stroke_align: str_field("strokeAlign")
             .map(|s| match s {
                 "INSIDE" => StrokeAlign::Inside,
                 "OUTSIDE" => StrokeAlign::Outside,
@@ -156,9 +157,26 @@ fn extract_node(raw: &serde_json::Value, blobs: &[Vec<u8>]) -> FigNode {
             })
             .unwrap_or(StrokeAlign::Center),
         effects: nodes::get_effects(raw),
-        fill_geometry: geometry::decode_geometry_paths(raw.get("fillGeometry"), blobs),
-        stroke_geometry: geometry::decode_geometry_paths(raw.get("strokeGeometry"), blobs),
-        vector_geometry: geometry::decode_vector_geometry(raw.get("vectorData"), blobs),
+        fill_geometry: nodes::get_geometry_paths(nodes::get(raw, "fillGeometry"), blobs),
+        stroke_geometry: nodes::get_geometry_paths(nodes::get(raw, "strokeGeometry"), blobs),
+        vector_geometry: nodes::get_vector_geometry(nodes::get(raw, "vectorData"), blobs),
         text_data: nodes::get_text_data(raw),
     }
+}
+
+/// Pull the raw `blobs` array (geometry byte streams) out of the root value.
+fn extract_blobs(root: &Value) -> Vec<Vec<u8>> {
+    let Some(arr) = nodes::get(root, "blobs").and_then(nodes::as_array_ref) else {
+        return Vec::new();
+    };
+    arr.iter()
+        .filter_map(|entry| {
+            let bytes = nodes::get(entry, "bytes").and_then(nodes::as_array_ref)?;
+            let mut out = Vec::with_capacity(bytes.len());
+            for b in bytes {
+                out.push(nodes::as_byte(b)?);
+            }
+            Some(out)
+        })
+        .collect()
 }

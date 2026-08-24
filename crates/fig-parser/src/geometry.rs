@@ -1,7 +1,6 @@
 //! Decoders for Figma's baked path and vector-network blobs.
 
 use crate::types::{GeometryPath, PathCommand, Vec2, VectorGeometry, WindingRule};
-use serde_json::Value;
 
 fn f32_at(bytes: &[u8], offset: &mut usize) -> Option<f32> {
     let end = offset.checked_add(4)?;
@@ -17,8 +16,8 @@ fn u32_at(bytes: &[u8], offset: &mut usize) -> Option<u32> {
     Some(value)
 }
 
-fn winding_rule(value: Option<&Value>) -> WindingRule {
-    match value.and_then(Value::as_str) {
+pub fn winding_rule(value: Option<&str>) -> WindingRule {
+    match value {
         Some("EVENODD") | Some("ODD") => WindingRule::EvenOdd,
         _ => WindingRule::NonZero,
     }
@@ -58,23 +57,6 @@ pub fn decode_commands_blob(bytes: &[u8]) -> Option<Vec<PathCommand>> {
     (!commands.is_empty()).then_some(commands)
 }
 
-pub fn decode_geometry_paths(value: Option<&Value>, blobs: &[Vec<u8>]) -> Vec<GeometryPath> {
-    value
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(|entry| {
-            let blob_id = entry.get("commandsBlob")?.as_u64()? as usize;
-            let commands = decode_commands_blob(blobs.get(blob_id)?)?;
-            Some(GeometryPath {
-                commands,
-                winding_rule: winding_rule(entry.get("windingRule")),
-                style_id: entry.get("styleID").and_then(Value::as_u64).unwrap_or(0) as u32,
-            })
-        })
-        .collect()
-}
-
 #[derive(Clone, Copy)]
 struct Vertex {
     x: f32,
@@ -91,7 +73,7 @@ struct Segment {
     end_dy: f32,
 }
 
-fn decode_vector_blob(bytes: &[u8]) -> Option<Vec<GeometryPath>> {
+pub fn decode_vector_blob(bytes: &[u8]) -> Option<Vec<GeometryPath>> {
     let mut offset = 0;
     let vertex_count = u32_at(bytes, &mut offset)? as usize;
     let segment_count = u32_at(bytes, &mut offset)? as usize;
@@ -196,22 +178,6 @@ fn decode_vector_blob(bytes: &[u8]) -> Option<Vec<GeometryPath>> {
         }
     }
     Some(paths)
-}
-
-pub fn decode_vector_geometry(value: Option<&Value>, blobs: &[Vec<u8>]) -> Option<VectorGeometry> {
-    let data = value?;
-    let blob_id = data.get("vectorNetworkBlob")?.as_u64()? as usize;
-    let paths = decode_vector_blob(blobs.get(blob_id)?)?;
-    let normalized_size = data.get("normalizedSize").and_then(|_| {
-        Some(Vec2 {
-            x: data.get("normalizedSize")?.get("x")?.as_f64()? as f32,
-            y: data.get("normalizedSize")?.get("y")?.as_f64()? as f32,
-        })
-    });
-    Some(VectorGeometry {
-        paths,
-        normalized_size,
-    })
 }
 
 #[cfg(test)]
