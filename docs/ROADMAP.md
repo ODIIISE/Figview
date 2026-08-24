@@ -372,6 +372,11 @@ Each milestone ends with something runnable and demonstrable. Estimates assume e
 
 ## 11. From viewer to "Figma v2": quality system & go-to-market reality
 
+> Full long-term vision (pillars: design, motion, 3D, shaders, local-first
+> collab, on-device AI, plugin platform — with phase ladder and decade-scale
+> architecture) lives in **VISION.md**. This section covers only what gates
+> market-readiness for Phase A.
+
 The ambition is to build something that changes the market the way Figma
 changed it. Here is the honest engineering path to that.
 
