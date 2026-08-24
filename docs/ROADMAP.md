@@ -166,6 +166,57 @@ Key rule: **every crate is usable headlessly from the command line.**
 
 ---
 
+## 4b. How Figma actually renders — and where an offline native viewer can beat it
+
+Primary source: Evan Wallace (Figma co-founder/CTO),
+*"Building a professional design tool on the web"* (Figma Engineering blog).
+
+### What Figma built
+
+| Decision | Detail | Why they did it |
+|----------|--------|-----------------|
+| **C++ core compiled to WASM** (emscripten/asm.js originally) | Own DOM, own compositor, own text layout engine — *"a browser inside a browser"* | Full control of memory layout & allocation; no GC pauses; ~2× native perf |
+| **Custom WebGL tile-based renderer** | Retained mode; tiles cached as GPU textures; supports masking, blur, dithered gradients, blend modes, nested opacity; fully anti-aliased | Rejected HTML/SVG/Canvas2D outright |
+| **Why NOT Canvas2D** | *"Immediate mode… all geometry has to be re-uploaded to the graphics card every frame. This is needlessly wasteful."* Also: no angular gradients, inconsistent text metrics across browsers | This exact trap is what v1's readback pipeline fell into |
+| **Why NOT SVG/DOM** | DOM baggage, geometry re-tessellated after every scale change, inconsistent mask/blend/blur, poor HiDPI AA | |
+| Biggest pain point | **No access to glyph outlines/kerning tables in browsers** — fonts must be bundled & shaped inside their WASM sandbox | Browsers hide OS font data |
+
+Modern Figma keeps this architecture (C++/WASM engine + WebGL/WebGPU tiles);
+the desktop app is literally the web app in a shell.
+
+### The structural insight
+
+Every Figma constraint exists because **they run inside someone else's
+sandbox**. We don't. As a native Windows viewer we can invert each one:
+
+| Figma's constraint (browser sandbox) | Our native advantage |
+|--------------------------------------|----------------------|
+| WebGL2 only, no reliable compute shaders | **wgpu → Vulkan/DX12**: compute-shader 2D rasterization (**Vello**) — correct fills, clips, blends on GPU at huge path counts |
+| Composites through the browser compositor (extra copies) | Direct swapchain: **zero readback, zero IPC pixels** — the v1 sin becomes structurally impossible |
+| Workers + SharedArrayBuffer threading limits | Real threads: parallel tessellation & tile rendering across all cores |
+| Can't read OS fonts (their #1 pain) | **cosmic-text / Parley** shape with actual system fonts — *better text fidelity than Figma itself* |
+| Files live in cloud; cold open = network + wasm compile | Local file + native code; plus **disk-persistent tile cache** per file version → instant reopen, works air-gapped |
+| Must stay compatible with every GPU/browser | We control the floor: require DX12/Vulkan-capable HW (2026 baseline), fall back gracefully |
+
+### Renderer strategy (decided at the M2 gate, designed for now)
+
+All three candidates consume the same `fig-scene` draw list, so the choice is
+swappable and benchmark-driven — not faith-driven:
+
+1. **Bootstrap — Canvas2D in the WebView** *(M2)*: ships correctness immediately; browser text/gradients/images; known ceiling.
+2. **Fallback — WebGPU canvas inside WebView2** (`navigator.gpu`, tile engine in WGSL): big speedup, still one window; auto-selected when available.
+3. **Target — Native Vello viewport embedded as a child surface** in the Tauri window (canvas area only; panels stay HTML): true swapchain + compute rasterizer + system-font shaping via cosmic-text. This is the *better-than-Figma* configuration, and it is realistic precisely because we're Windows-first.
+
+M2 exit criteria therefore include a **renderer bake-off**: same corpus page,
+same machine, measure cold-open ms, pan/zoom fps at 10k nodes, and visual diff
+score vs the resvg oracle. Data picks the track; ambition doesn't.
+
+> Rule preserved from §4: Rust never ships pixels over IPC in any track.
+> In tracks 1–2 the *browser* rasterizes; in track 3 the *swapchain* presents.
+> Only scene data crosses the boundary, once, lazily per page.
+
+---
+
 ## 5. Tech stack
 
 | Layer | Choice | Why |
@@ -173,9 +224,10 @@ Key rule: **every crate is usable headlessly from the command line.**
 | Shell | Tauri 2.x (keep) | Already working; small binaries; WebView2 present on Win10+ |
 | Language | Rust + TypeScript | Existing skill set; kiwi crates are Rust-native |
 | Kiwi decode | keep `kiwi-schema` crate | Self-describing schema per file handles version drift |
-| Reference raster | `resvg` + `tiny-skia` + `fontdb` | Industry-standard fidelity incl. text/shadows/masks |
-| Live renderer | Canvas2D (phase 1) → optional WebGPU (phase 3) | Correctness first, speed second |
-| Tests | cargo test + playwright-free DOM smoke + golden-image diffs | Deterministic, CI-runnable |
+| Reference raster | `resvg` + `tiny-skia` + `fontdb` | Industry-standard fidelity incl. text/shadows/masks — the test oracle & export engine |
+| Live renderer | Canvas2D bootstrap → WebGPU-in-WebView fallback → **native Vello viewport target** (§4b) | Correctness first; bake-off at M2 gate decides |
+| Text shaping (native track) | `cosmic-text` / Parley + fontdb | System fonts with real metrics — beats Figma's bundled-font sandbox |
+| Tests | cargo test + DOM smoke + golden-image diffs | Deterministic, CI-runnable |
 | Serialization | bincode + flate2 for scene chunks | Compact, fast, typed |
 
 ---
@@ -202,7 +254,8 @@ Each milestone ends with something runnable and demonstrable. Estimates assume e
 - [ ] Canvas2D renderer: draw-list execution, camera, culling, DPR handling
 - [ ] Overlay: text, selection outline; panels: tabs/pages/layers/properties
 - [ ] Open paths: dialog/drag-drop/CLI arg; progress states with cancel
-- **Exit criteria:** open any corpus file < 2 s; 60 fps pan/zoom on largest page; F1–F5 demoable.
+- [ ] **Renderer bake-off** (§4b): Canvas2D vs WebGPU-in-WebView vs native-Vello-child-surface on the largest corpus page — cold open ms, pan fps @10k nodes, visual-diff vs resvg oracle. Decision recorded in `docs/DECISIONS.md`.
+- **Exit criteria:** open any corpus file < 2 s; 60 fps pan/zoom on largest page; F1–F5 demoable; renderer track chosen with data.
 
 ### M3 — Fidelity pass *(≈ 2 weeks)*
 - [ ] Blend modes, clips/masks, booleans, shadows (Canvas2D equivalents), gradient transform edge cases
@@ -264,8 +317,8 @@ Each milestone ends with something runnable and demonstrable. Estimates assume e
 
 | # | Question | Default if no answer |
 |---|----------|---------------------|
-| D1 | Architecture B+C sign-off (WebView renders; resvg oracle)? | Proceed with B+C |
-| D2 | Windows-only first, macOS/Linux later? | Yes — Windows first |
+| D1 | Architecture sign-off: layered crates + renderer tracks per §4/§4b (Canvas2D bootstrap → bake-off at M2; native Vello viewport as the ambition, WebGPU-in-webview as fallback)? | Proceed as written |
+| D2 | Windows-only first, macOS/Linux later? | Yes — Windows first (also unlocks the child-surface native track) |
 | D3 | Can you provide 10–30 real .fig files (incl. the one that hung) for the corpus? | Public samples only — much weaker |
-| D4 | Priority when fidelity conflicts with speed: correct-but-slower, or fast-but-approximate? | Correct first, optimize in M6 |
+| D4 | Priority when fidelity conflicts with speed: correct-but-slower, or fast-but-approximate? | Correct first, optimize in M6 (**ANSWERED: fidelity first**) |
 | D5 | Distribution: portable exe only, or also signed installer? | Portable first (matches v1) |
