@@ -2,7 +2,6 @@
 
 use crate::error::ParseError;
 use crate::fastkiwi::FastVal;
-use crate::geometry;
 use crate::nodes;
 use crate::types::*;
 use rayon::prelude::*;
@@ -70,21 +69,34 @@ pub fn build_document(
         }
     }
 
-    // Sort children by position
-    let pos_lookup: HashMap<String, String> = nodes
-        .iter()
-        .filter_map(|n| {
-            Some((
-                n.guid.as_ref()?.to_string(),
-                n.position.clone().unwrap_or_default(),
-            ))
-        })
-        .collect();
+    // Sort children by position. Figma position keys are numeric strings
+    // ("0", "1", "10", …, "END") — a lexicographic sort would scramble
+    // z-order past 9 siblings, so parse numerically and pin non-numeric
+    // keys (like "END") to the end, preserving their relative order.
+    let pos_lookup: HashMap<String, (u64, usize)> = {
+        let mut m: HashMap<String, (u64, usize)> = HashMap::new();
+        let mut seq = 0usize;
+        for n in nodes.iter() {
+            if let (Some(guid), Some(pos)) = (&n.guid, &n.position) {
+                let key = match pos.parse::<u64>() {
+                    Ok(v) => v,
+                    Err(_) => u64::MAX,
+                };
+                m.insert(guid.to_string(), (key, seq));
+                seq += 1;
+            }
+        }
+        m
+    };
     for ids in children_map.values_mut() {
         ids.sort_by(|a, b| {
-            let pa = pos_lookup.get(a).map(|s| s.as_str()).unwrap_or("");
-            let pb = pos_lookup.get(b).map(|s| s.as_str()).unwrap_or("");
-            pa.cmp(pb)
+            let pa = pos_lookup.get(a).map(|s| s.0).unwrap_or(u64::MAX);
+            let pb = pos_lookup.get(b).map(|s| s.0).unwrap_or(u64::MAX);
+            pa.cmp(&pb).then_with(|| {
+                let sa = pos_lookup.get(a).map(|s| s.1).unwrap_or(usize::MAX);
+                let sb = pos_lookup.get(b).map(|s| s.1).unwrap_or(usize::MAX);
+                sa.cmp(&sb)
+            })
         });
     }
 
