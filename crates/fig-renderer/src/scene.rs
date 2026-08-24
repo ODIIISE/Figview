@@ -172,15 +172,13 @@ fn build_node_subtree(
                 child_id,
                 &node_index,
                 &world_transform,
-                depth + 1,
+                _depth + 1,
                 flat,
                 content_bounds,
                 visited,
             ) {
                 child_indices.push(idx);
             }
-        }
-    }
         }
     }
 
@@ -233,7 +231,7 @@ fn build_node_subtree(
         size: node.size,
         effects: node.effects.clone(),
         children: child_indices,
-        depth,
+        depth: _depth,
     });
 
     Some(result_idx)
