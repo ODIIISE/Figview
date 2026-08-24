@@ -4,6 +4,7 @@ pub mod archive;
 pub mod binary;
 pub mod document;
 pub mod error;
+pub mod fastkiwi;
 pub mod geometry;
 pub mod kiwi;
 pub mod nodes;

@@ -1,17 +1,17 @@
 //! Document tree construction from decoded Kiwi message.
 
 use crate::error::ParseError;
+use crate::fastkiwi::FastVal;
 use crate::geometry;
 use crate::nodes;
 use crate::types::*;
-use kiwi_schema::Value;
 use rayon::prelude::*;
 use std::collections::HashMap;
 
 /// Build the document directly from the decoded kiwi root value —
 /// no intermediate JSON representation, nodes extracted in parallel.
 pub fn build_document(
-    root: &Value,
+    root: &FastVal,
     schema_def_count: usize,
     meta: &serde_json::Value,
     thumbnail: &[u8],
@@ -30,11 +30,11 @@ pub fn build_document(
         .and_then(|v| v.as_str())
         .map(str::to_string);
 
-    let node_changes: &[Value] = match nodes::get(root, "nodeChanges").and_then(nodes::as_array_ref)
-    {
-        Some(a) => a,
-        None => &[],
-    };
+    let node_changes: &[FastVal] =
+        match nodes::get(root, "nodeChanges").and_then(nodes::as_array_ref) {
+            Some(a) => a,
+            None => &[],
+        };
     let blobs = extract_blobs(root);
 
     // Extract every node in parallel; each change is independent.
@@ -117,11 +117,11 @@ pub fn build_document(
     })
 }
 
-fn extract_node(raw: &Value, blobs: &[Vec<u8>]) -> FigNode {
+fn extract_node(raw: &FastVal, blobs: &[Vec<u8>]) -> FigNode {
     let type_str = || nodes::as_str_of(raw, "type");
-    let str_field = |name: &str| nodes::get(raw, name).and_then(|v| nodes::as_str_of_v(v));
-    let num_field = |name: &str| nodes::get(raw, name).and_then(|v| nodes::as_f64_v(v));
-    let bool_field = |name: &str| nodes::get(raw, name).and_then(|v| nodes::as_bool_v(v));
+    let str_field = |name: &str| nodes::get(raw, name).and_then(|v| v.as_str());
+    let num_field = |name: &str| nodes::get(raw, name).and_then(|v| v.as_f64());
+    let bool_field = |name: &str| nodes::get(raw, name).and_then(|v| v.as_bool());
 
     FigNode {
         guid: nodes::get_guid(raw, "guid"),
@@ -165,18 +165,14 @@ fn extract_node(raw: &Value, blobs: &[Vec<u8>]) -> FigNode {
 }
 
 /// Pull the raw `blobs` array (geometry byte streams) out of the root value.
-fn extract_blobs(root: &Value) -> Vec<Vec<u8>> {
+fn extract_blobs(root: &FastVal) -> Vec<Vec<u8>> {
     let Some(arr) = nodes::get(root, "blobs").and_then(nodes::as_array_ref) else {
         return Vec::new();
     };
     arr.iter()
         .filter_map(|entry| {
-            let bytes = nodes::get(entry, "bytes").and_then(nodes::as_array_ref)?;
-            let mut out = Vec::with_capacity(bytes.len());
-            for b in bytes {
-                out.push(nodes::as_byte(b)?);
-            }
-            Some(out)
+            let bytes = nodes::get(entry, "bytes")?.as_bytes()?;
+            Some(bytes.to_vec())
         })
         .collect()
 }
