@@ -3,4 +3,5 @@
 *.pdb
 .DS_Store
 /.freebuff
-/node_modules
+/node_modulescorpus/*.log
+

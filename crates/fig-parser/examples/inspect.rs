@@ -2,14 +2,47 @@
 //!
 //! All lookups are index-based (HashMap) — no linear scans — so timing
 //! reflects the real pipeline rather than instrumentation overhead.
+//!
+//! Usage:
+//!   inspect <file.fig>            human-readable summary
+//!   inspect <file.fig> --json     machine-readable summary (for manifests)
 
 use std::collections::HashMap;
 use std::time::Instant;
 
+#[derive(serde::Serialize)]
+struct PageSummary {
+    name: String,
+    direct_children: usize,
+    reachable: usize,
+    max_depth: usize,
+}
+
+#[derive(serde::Serialize)]
+struct FileSummary {
+    file: String,
+    prelude: String,
+    version: u32,
+    schema_defs: usize,
+    nodes: usize,
+    images: usize,
+    thumbnail_bytes: usize,
+    pages: Vec<PageSummary>,
+    self_cycles: usize,
+    multi_parent_nodes: usize,
+    orphaned_subtrees: usize,
+    parse_ms: u128,
+}
+
 fn main() {
-    let path = std::env::args()
-        .nth(1)
-        .expect("Usage: inspect <path/to/file.fig>");
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let json = args.iter().any(|a| a == "--json");
+    let path = args
+        .iter()
+        .find(|a| !a.starts_with("--"))
+        .cloned()
+        .expect("Usage: inspect <path/to/file.fig> [--json]");
+
     println!("Parsing: {}", path);
 
     let t_parse = Instant::now();
@@ -20,7 +53,7 @@ fn main() {
             std::process::exit(1);
         }
     };
-    println!("  parsed in {:.2?}", t_parse.elapsed());
+    let parse_ms = t_parse.elapsed().as_millis();
 
     // GUID -> node index for O(1) lookups.
     let _index: HashMap<String, usize> = doc
@@ -30,38 +63,23 @@ fn main() {
         .filter_map(|(i, n)| n.guid.as_ref().map(|g| (g.to_string(), i)))
         .collect();
 
-    println!("  Prelude: {}", doc.header.prelude);
-    println!("  Version: {}", doc.header.version);
-    println!("  Schema defs: {}", doc.header.schema_def_count);
-    println!("  File: {}", doc.file_name);
-    println!("  Nodes: {}", doc.nodes.len());
-    println!("  Images: {}", doc.image_hashes.len());
-    println!("  Thumbnail: {} bytes", doc.thumbnail.len());
-
-    // Cycle detection: report self-references and nodes claimed by
-    // multiple parents, so hangs can never hide in the graph again.
+    // Cycle detection: report self-references and multiply-parented nodes.
     let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
-    let mut cycles = 0usize;
-    let mut duplicates = 0usize;
+    let mut self_cycles = 0usize;
+    let mut multi_parent_nodes = 0usize;
     for (id, children) in &doc.children_map {
         for c in children {
             if c == id {
-                cycles += 1;
+                self_cycles += 1;
                 eprintln!("  CYCLE: node {} is its own child", c);
             }
             if !seen.insert(c.as_str()) {
-                duplicates += 1;
+                multi_parent_nodes += 1;
             }
         }
     }
-    if cycles > 0 || duplicates > 0 {
-        println!(
-            "  GRAPH WARNINGS: {} self-cycles, {} nodes with multiple parents",
-            cycles, duplicates
-        );
-    }
 
-    println!("  Pages: {}", doc.pages.len());
+    let mut pages = Vec::new();
     for page in &doc.pages {
         let key = page.id.to_string();
         let empty = vec![];
@@ -92,13 +110,19 @@ fn main() {
             reachable,
             max_depth
         );
+        pages.push(PageSummary {
+            name: page.name.clone(),
+            direct_children: children.len(),
+            reachable,
+            max_depth,
+        });
     }
 
     // Orphan check: nodes whose key claims children but is neither a page
     // nor reachable as some node's child (unreachable roots).
     let page_keys: std::collections::HashSet<String> =
         doc.pages.iter().map(|p| p.id.to_string()).collect();
-    let mut orphaned = 0usize;
+    let mut orphaned_subtrees = 0usize;
     for n in &doc.nodes {
         if let Some(guid) = &n.guid {
             let key = guid.to_string();
@@ -106,11 +130,49 @@ fn main() {
                 && !page_keys.contains(&key)
                 && !seen.contains(key.as_str())
             {
-                orphaned += 1;
+                orphaned_subtrees += 1;
             }
         }
     }
-    if orphaned > 0 {
-        println!("  Orphaned subtrees (unreachable roots): {}", orphaned);
+
+    if json {
+        let summary = FileSummary {
+            file: path,
+            prelude: doc.header.prelude.clone(),
+            version: doc.header.version,
+            schema_defs: doc.header.schema_def_count,
+            nodes: doc.nodes.len(),
+            images: doc.image_hashes.len(),
+            thumbnail_bytes: doc.thumbnail.len(),
+            pages,
+            self_cycles,
+            multi_parent_nodes,
+            orphaned_subtrees,
+            parse_ms,
+        };
+        println!("{}", serde_json::to_string_pretty(&summary).unwrap());
+    } else {
+        println!("  Prelude: {}", doc.header.prelude);
+        println!("  Version: {}", doc.header.version);
+        println!("  Schema defs: {}", doc.header.schema_def_count);
+        println!("  File: {}", doc.file_name);
+        println!("  Nodes: {}", doc.nodes.len());
+        println!("  Images: {}", doc.image_hashes.len());
+        println!("  Thumbnail: {} bytes", doc.thumbnail.len());
+        println!("  Pages: {}", doc.pages.len());
+
+        if self_cycles > 0 || multi_parent_nodes > 0 {
+            println!(
+                "  GRAPH WARNINGS: {} self-cycles, {} nodes with multiple parents",
+                self_cycles, multi_parent_nodes
+            );
+        }
+        if orphaned_subtrees > 0 {
+            println!(
+                "  Orphaned subtrees (unreachable roots): {}",
+                orphaned_subtrees
+            );
+        }
+        println!("  Parsed in {:.2?}", t_parse.elapsed());
     }
 }
