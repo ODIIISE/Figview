@@ -1,0 +1,59 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\Vision - Marketing Dashboard UI KIT.fig
+  Prelude: fig-kiwi
+  Version: 20
+  Schema defs: 237
+  File: Marketing Dashboard UI KIT
+  Pages: 2
+    Page: Screen (0:1)
+      Children: 94
+        32:6103: Login_Light (Frame)
+        36:1730: Login_Dark (Frame)
+        42:18291: Notification_Light (Frame)
+        6:504: Dashboard_Light (Frame)
+        36:1799: Dashboard Dark_Dark (Frame)
+        42:18726: Notification_Dark (Frame)
+        9:1011: Analytics_Light (Frame)
+        36:1971: Analytics_Dark (Frame)
+        10:226: Sales_Light (Frame)
+        36:2178: Sales_Dark (Frame)
+        ... and 84 more
+    Page: Design System (6:56)
+      Children: 11
+        6:67: Frame 1 (Frame)
+        45:3558: Color Guideline (Frame)
+        65:3778: Animate (Frame)
+        50:3680: Layer 2 1/Default (Unknown)
+        50:3682: Layer 2 1/Variant2 (Unknown)
+        50:3684: Layer 2 1/Variant3 (Unknown)
+        50:3686: Layer 2 2/Variant2 (Unknown)
+        50:3688: Layer 2 2/Variant3 (Unknown)
+        50:3690: Layer 2 2/Variant3 (Unknown)
+        56:3558: Animate 1 (Frame)
+        ... and 1 more
+  Total nodes: 15211
+  Images: 74
+  Thumbnail: 5109 bytes
+
+  Document tree:
+    Root (0:0) has 3 children
+      0:1: Screen (Canvas)
+        32:6103: Login_Light (Frame)
+        36:1730: Login_Dark (Frame)
+        42:18291: Notification_Light (Frame)
+        6:504: Dashboard_Light (Frame)
+        36:1799: Dashboard Dark_Dark (Frame)
+        ... and 89 more
+      0:2: Internal Only Canvas (Canvas)
+        27:3836: Layer 2 2/Variant3 (Unknown)
+        13:2480: Layer 2 1/Default (Unknown)
+        6:57: iPhone & iPad/🌝 Label/Primary (RoundedRectangle)
+        6:101: H1 Title (Text)
+        6:102: H2 Title (Text)
+        ... and 36 more
+      6:56: Design System (Canvas)
+        6:67: Frame 1 (Frame)
+        45:3558: Color Guideline (Frame)
+        65:3778: Animate (Frame)
+        50:3680: Layer 2 1/Default (Unknown)
+        50:3682: Layer 2 1/Variant2 (Unknown)
+        ... and 6 more

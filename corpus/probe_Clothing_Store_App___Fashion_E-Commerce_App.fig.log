@@ -1,0 +1,39 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\Clothing Store App _ Fashion E-Commerce App.fig
+  Prelude: fig-kiwi
+  Version: 35
+  Schema defs: 268
+  File: Clothing Store App / Fashion E-Commerce App
+  Pages: 1
+    Page: Page 1 (0:1)
+      Children: 64
+        0:999: Splash (Frame)
+        0:1025: Welcome Screen (Frame)
+        0:1055: Onboarding 1 (Frame)
+        0:1123: Onboarding 2 (Frame)
+        0:1195: Onboarding 3 (Frame)
+        0:1268: Home (Frame)
+        0:1782: Coupons (Frame)
+        1:2167: My Cart (Frame)
+        1:2261: Remove from cart (Frame)
+        1:2004: My Whishlist (Frame)
+        ... and 54 more
+  Total nodes: 4298
+  Images: 10
+  Thumbnail: 5138 bytes
+
+  Document tree:
+    Root (0:0) has 2 children
+      0:1: Page 1 (Canvas)
+        0:999: Splash (Frame)
+        0:1025: Welcome Screen (Frame)
+        0:1055: Onboarding 1 (Frame)
+        0:1123: Onboarding 2 (Frame)
+        0:1195: Onboarding 3 (Frame)
+        ... and 59 more
+      0:2: Internal Only Canvas (Canvas)
+        1:1454: Frame (Unknown)
+        0:4257: vuesax/linear/box-tick (Unknown)
+        0:4229: vuesax/linear/box (Unknown)
+        0:4211: vuesax/linear/clipboard-text (Unknown)
+        0:3670: vuesax/linear/close-circle (Unknown)
+        ... and 136 more

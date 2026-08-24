@@ -15,7 +15,29 @@ pub fn open_archive(path: &str) -> Result<FigArchive, ParseError> {
     read_archive(std::io::BufReader::new(std::fs::File::open(path)?))
 }
 
-pub fn read_archive<R: Read + std::io::Seek>(reader: R) -> Result<FigArchive, ParseError> {
+/// Magic prefix of a raw (non-ZIP) kiwi stream.
+const KIWI_MAGIC: &[u8] = b"fig-kiwi";
+
+pub fn read_archive<R: Read + std::io::Seek>(mut reader: R) -> Result<FigArchive, ParseError> {
+    // Format sniffing: some distributed .fig files are raw `fig-kiwi`
+    // streams (canvas data only — no meta.json, thumbnail or images),
+    // not ZIP containers. Detect by magic bytes before assuming ZIP.
+    let mut magic = [0u8; 8];
+    let start = reader.stream_position()?;
+    reader.read_exact(&mut magic)?;
+    reader.seek(std::io::SeekFrom::Start(start))?;
+
+    if &magic == KIWI_MAGIC {
+        let mut canvas_fig = Vec::new();
+        reader.read_to_end(&mut canvas_fig)?;
+        return Ok(FigArchive {
+            canvas_fig,
+            meta_json: Vec::new(),
+            thumbnail: Vec::new(),
+            images: HashMap::new(),
+        });
+    }
+
     let mut archive = zip::ZipArchive::new(reader)?;
     let mut canvas_fig = None;
     let mut meta_json = Vec::new();

@@ -98,6 +98,9 @@ fn build_render_tree(doc: &FigDocument, page_id: &NodeId, page_name: String) -> 
 
     let mut flat_nodes: Vec<RenderNode> = Vec::new();
     let mut content_bounds = Rect::ZERO;
+    // Guards against cyclic parent/child references, which real .fig files
+    // occasionally contain — without this the recursion below never ends.
+    let mut visited: std::collections::HashSet<String> = std::collections::HashSet::new();
     let root_indices: Vec<usize> = page_children
         .iter()
         .filter_map(|child_id| {
@@ -109,6 +112,7 @@ fn build_render_tree(doc: &FigDocument, page_id: &NodeId, page_name: String) -> 
                 0,
                 &mut flat_nodes,
                 &mut content_bounds,
+                &mut visited,
             )
         })
         .collect();
@@ -128,15 +132,22 @@ fn build_render_tree(doc: &FigDocument, page_id: &NodeId, page_name: String) -> 
 
 /// Recursively build a subtree starting from a node ID.
 /// Returns the index of the node in the flat list.
+#[allow(clippy::too_many_arguments)]
 fn build_node_subtree(
     doc: &FigDocument,
     node_id: &str,
     node_index: &std::collections::HashMap<String, usize>,
     parent_transform: &Matrix,
-    depth: usize,
+    _depth: usize,
     flat: &mut Vec<RenderNode>,
     content_bounds: &mut Rect,
+    visited: &mut std::collections::HashSet<String>,
 ) -> Option<usize> {
+    // Cycle / duplicate guard: a node may appear only once in the tree.
+    if !visited.insert(node_id.to_string()) {
+        return None;
+    }
+
     let original_idx = *node_index.get(node_id)?;
     let node = &doc.nodes[original_idx];
 
@@ -159,14 +170,17 @@ fn build_node_subtree(
             if let Some(idx) = build_node_subtree(
                 doc,
                 child_id,
-                node_index,
+                &node_index,
                 &world_transform,
                 depth + 1,
                 flat,
                 content_bounds,
+                visited,
             ) {
                 child_indices.push(idx);
             }
+        }
+    }
         }
     }
 

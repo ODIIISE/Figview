@@ -1,0 +1,86 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\ImazAi - AI Image Website UI KIT.fig
+  Prelude: fig-kiwi
+  Version: 52
+  Schema defs: 327
+  File: ImazAi - AI Image Website UI KIT
+  Pages: 4
+    Page: 🎨 ・ Design Style (4:5)
+      Children: 3
+        16:984: Colors (Frame)
+        16:1026: Typography (Frame)
+        16:1298: Spacing, Borders, Shadows (Frame)
+    Page: 🖥️ ・ UI Design (4:6)
+      Children: 53
+        35:5306: Light Mode (Instance)
+        35:5313: Onboarding - Authentifications (Instance)
+        35:5305: Login Page (Frame)
+        35:7334: Register Page (Frame)
+        37:8174: Forgot Password Page (Frame)
+        37:8253: Forgot Password Reset Page (Frame)
+        37:8594: Forgot Password Page - Set New Password (Frame)
+        37:8687: Home Page (Instance)
+        14:1394: Home Page (Frame)
+        37:8705: About Page (Frame)
+        ... and 43 more
+    Page: ⌘ ・ Component (4:7)
+      Children: 9
+        15:9311: Annotation (Frame)
+        16:662: Logo Imazai (Frame)
+        16:1555: Button (Frame)
+        16:3045: Form Input (Frame)
+        16:3359: Badge (Frame)
+        16:3549: Avatar (Frame)
+        17:5049: Toast (Frame)
+        21:1526: Label (Frame)
+        90:44194: Navbar & Footer (Frame)
+    Page: 🕹️ ・ Icons (4:8)
+      Children: 20
+        14:3754: Layout (Frame)
+        14:3945: Charts (Frame)
+        14:4094: Security (Frame)
+        14:4204: Education (Frame)
+        14:4299: Development (Frame)
+        14:4472: Arrows (Frame)
+        14:4750: Finance & eCommerce (Frame)
+        14:4989: General (Frame)
+        14:5570: Alerts & feedback (Frame)
+        14:5650: Shapes (Frame)
+        ... and 10 more
+  Total nodes: 16605
+  Images: 77
+  Thumbnail: 11492 bytes
+
+  Document tree:
+    Root (0:0) has 5 children
+      0:2: Internal Only Canvas (Canvas)
+        2001:19704: Logo Imazai/Default/False (Unknown)
+        7:9: Tokens (Unknown)
+        12:6: Text/Loud [900] (RoundedRectangle)
+        12:7: Heading/Large (Text)
+        12:8: Text/Muted [600] (RoundedRectangle)
+        ... and 1578 more
+      4:5: 🎨 ・ Design Style (Canvas)
+        16:984: Colors (Frame)
+        16:1026: Typography (Frame)
+        16:1298: Spacing, Borders, Shadows (Frame)
+      4:6: 🖥️ ・ UI Design (Canvas)
+        35:5306: Light Mode (Instance)
+        35:5313: Onboarding - Authentifications (Instance)
+        35:5305: Login Page (Frame)
+        35:7334: Register Page (Frame)
+        37:8174: Forgot Password Page (Frame)
+        ... and 48 more
+      4:7: ⌘ ・ Component (Canvas)
+        15:9311: Annotation (Frame)
+        16:662: Logo Imazai (Frame)
+        16:1555: Button (Frame)
+        16:3045: Form Input (Frame)
+        16:3359: Badge (Frame)
+        ... and 4 more
+      4:8: 🕹️ ・ Icons (Canvas)
+        14:3754: Layout (Frame)
+        14:3945: Charts (Frame)
+        14:4094: Security (Frame)
+        14:4204: Education (Frame)
+        14:4299: Development (Frame)
+        ... and 15 more

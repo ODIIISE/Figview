@@ -1,0 +1,99 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\Bredar - Seller Dashboard UI Kit.fig
+  Prelude: fig-kiwi
+  Version: 48
+  Schema defs: 318
+  File: Bedar - Seller Dashboard UI Kit
+  Pages: 8
+    Page: 📐Design (0:1)
+      Children: 206
+        72:3849: dashboard/desktop/light (Unknown)
+        914:73153: dashboard/tablet/light (Unknown)
+        940:117497: dashboard/mobile/light (Unknown)
+        940:118904: menu/mobile/light (Unknown)
+        920:67560: dashboard (user-dropdown)/desktop/light (Unknown)
+        948:85608: dashboard (user-dropdown)/tablet/light (Unknown)
+        948:85607: dashboard [user-dropdown]/mobile/light (Unknown)
+        920:67559: dashboard [search-dropdown]/desktop/light (Unknown)
+        954:92767: dashboard [search-dropdown]/tablet/light (Unknown)
+        959:175904: dashboard [search-dropdown]/mobile/light (Unknown)
+        ... and 196 more
+    Page: --- (1:2)
+      Children: 0
+    Page: 🌈 Colors (1:4)
+      Children: 1
+        54:194666: Colors (Section)
+    Page: 🅰️ Typography (1:5)
+      Children: 1
+        7:247312: Typography (Section)
+    Page: 🦄 Icons (13:466)
+      Children: 6
+        13:787896: Main set (Section)
+        13:789133: Spot (Section)
+        13:789183: App and channel icons (Section)
+        13:789278: Navigation (Section)
+        13:789593: Circle Flag (Section)
+        13:791995: Border Flag (Section)
+    Page: Welcome (201:167517)
+      Children: 1
+        201:167767: Cover (Frame)
+    Page: 📦Component (1319:219247)
+      Children: 49
+        1319:248650: Badge (Section)
+        1319:279108: Button (Section)
+        1319:279109: Check box (Section)
+        1394:365104: Radio (Section)
+        1319:284665: Avatar (Section)
+        1319:296173: Dropdown (Section)
+        1322:93153: Title (Section)
+        1322:180181: Sticky bottom bar (Section)
+        1327:460761: Input (Section)
+        1327:463029: Devider (Section)
+        ... and 39 more
+    Page: ↔ Space & Border (1401:358304)
+      Children: 2
+        50:200877: Borders radius (Section)
+        50:200961: Spacing (Section)
+  Total nodes: 27354
+  Images: 374
+  Thumbnail: 27479 bytes
+
+  Document tree:
+    Root (0:0) has 9 children
+      201:167517: Welcome (Canvas)
+        201:167767: Cover (Frame)
+      1:2: --- (Canvas)
+      0:2: Internal Only Canvas (Canvas)
+        53:131926: 1 (Frame)
+        52:123504: thumbnail - 1208x840 (Unknown)
+        52:170622: overview - 2112x5000 (Unknown)
+        52:166595: cover - 1400x600 (Unknown)
+        54:196765: thumbnail - 1800x1360 X2 (Unknown)
+        ... and 1761 more
+      0:1: 📐Design (Canvas)
+        72:3849: dashboard/desktop/light (Unknown)
+        914:73153: dashboard/tablet/light (Unknown)
+        940:117497: dashboard/mobile/light (Unknown)
+        940:118904: menu/mobile/light (Unknown)
+        920:67560: dashboard (user-dropdown)/desktop/light (Unknown)
+        ... and 201 more
+      1319:219247: 📦Component (Canvas)
+        1319:248650: Badge (Section)
+        1319:279108: Button (Section)
+        1319:279109: Check box (Section)
+        1394:365104: Radio (Section)
+        1319:284665: Avatar (Section)
+        ... and 44 more
+      13:466: 🦄 Icons (Canvas)
+        13:787896: Main set (Section)
+        13:789133: Spot (Section)
+        13:789183: App and channel icons (Section)
+        13:789278: Navigation (Section)
+        13:789593: Circle Flag (Section)
+        ... and 1 more
+      1:4: 🌈 Colors (Canvas)
+        54:194666: Colors (Section)
+      1401:358304: ↔ Space & Border (Canvas)
+        50:200877: Borders radius (Section)
+        50:200961: Spacing (Section)
+      1:5: 🅰️ Typography (Canvas)
+        7:247312: Typography (Section)

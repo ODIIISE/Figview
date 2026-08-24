@@ -1,0 +1,63 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\UI Prep Design System 8.0.fig
+  parsed in 12.31s
+  Prelude: fig-kiwi
+  Version: 35
+  Schema defs: 279
+  File: UI Prep Design System 8.0
+  Nodes: 51051
+  Images: 47
+  Thumbnail: 45445 bytes
+  Pages: 52
+    Page "     👋  Welcome" (0:1): 3 direct children, 35 reachable, depth 4
+    Page "     🌄  Color Styles" (4:2): 4 direct children, 32 reachable, depth 2
+    Page "     📐   Grid & Layout Styles" (563:6598): 25 direct children, 241 reachable, depth 2
+    Page "     🛠 Workflow A" (571:143): 8 direct children, 26 reachable, depth 2
+    Page "Styles....................................................................." (1428:22097): 2 direct children, 2 reachable, depth 1
+    Page "Components......................................................................." (1428:22098): 2 direct children, 2 reachable, depth 1
+    Page "     🛠 Workflow B" (1428:22099): 8 direct children, 26 reachable, depth 2
+    Page "     🛠 Workflow C" (1428:22100): 8 direct children, 26 reachable, depth 2
+    Page "Design Work....................................................................." (2183:24085): 2 direct children, 2 reachable, depth 1
+    Page "      ❖  Button" (2183:24086): 10 direct children, 3256 reachable, depth 11
+    Page "      ❖  Badge" (2214:26187): 8 direct children, 1875 reachable, depth 11
+    Page "      ❖  Chip" (2214:26188): 5 direct children, 515 reachable, depth 11
+    Page "      ❖  Tooltip" (2214:26189): 6 direct children, 804 reachable, depth 11
+    Page "      ❖  Icon" (2214:26792): 91 direct children, 238 reachable, depth 3
+    Page "      ❖  Avatar" (2214:26793): 8 direct children, 1419 reachable, depth 11
+    Page "      ❖  Input" (2219:25163): 24 direct children, 6395 reachable, depth 12
+    Page "      ❖  Dialog" (2226:25292): 5 direct children, 1047 reachable, depth 11
+    Page "      ❖  Pagination" (2226:25293): 8 direct children, 1121 reachable, depth 11
+    Page "      ❖  Card" (2226:25294): 7 direct children, 1601 reachable, depth 11
+    Page "      ❖  Alert" (2226:25296): 6 direct children, 558 reachable, depth 11
+    Page "      ❖  Snack Bar" (2226:25297): 5 direct children, 357 reachable, depth 11
+    Page "      ❖  Chat" (2229:24785): 5 direct children, 449 reachable, depth 11
+    Page "      ❖  Feed" (2229:24786): 7 direct children, 1131 reachable, depth 11
+    Page "      ❖  Datepicker Menu" (2229:24787): 7 direct children, 2386 reachable, depth 11
+    Page "      ❖  Navigation / Top" (2229:24789): 5 direct children, 445 reachable, depth 11
+    Page "      ❖  Navigation / Side" (2232:25353): 8 direct children, 1554 reachable, depth 11
+    Page "      ❖  Tab" (2232:25354): 18 direct children, 3270 reachable, depth 11
+    Page "      ❖  File" (2232:25355): 6 direct children, 934 reachable, depth 11
+    Page "      ❖  Media" (2232:25357): 4 direct children, 21 reachable, depth 4
+    Page "      ❖  Notification" (2232:25358): 7 direct children, 1231 reachable, depth 11
+    Page "      ❖  Chart" (2232:25359): 14 direct children, 892 reachable, depth 11
+    Page "      ❖  Progress Bar" (2232:25360): 5 direct children, 447 reachable, depth 11
+    Page "      ❖  Slider" (2232:25361): 6 direct children, 1166 reachable, depth 11
+    Page "      ❖  UI Kit Doc" (2232:27234): 8 direct children, 27 reachable, depth 3
+    Page "      ❖  Logo" (2232:27318): 3 direct children, 9 reachable, depth 4
+    Page "      ❖  Toggle" (3129:43751): 12 direct children, 1894 reachable, depth 11
+    Page "      ❖  Dropdown Menu" (3237:46402): 9 direct children, 2355 reachable, depth 11
+    Page "      ❖  Spinner" (3396:50353): 5 direct children, 201 reachable, depth 10
+    Page "     ✏\u{fe0f}  Typography Styles" (3584:62067): 2 direct children, 46 reachable, depth 4
+    Page "     📦  Elevation Styles" (3584:62184): 2 direct children, 11 reachable, depth 3
+    Page "      ❖  Breadcrumbs" (3587:65944): 7 direct children, 532 reachable, depth 11
+    Page "      ❖  Banner" (3587:65945): 5 direct children, 689 reachable, depth 11
+    Page "      ❖  Accordion" (3587:67440): 8 direct children, 1026 reachable, depth 11
+    Page "      ❖  Button group" (3595:62835): 8 direct children, 948 reachable, depth 11
+    Page "      ❖  Slot" (3834:29992): 8 direct children, 16 reachable, depth 2
+    Page "      ❖  Table" (3871:34352): 10 direct children, 2445 reachable, depth 11
+    Page "    🌈  Cover" (4088:33630): 1 direct children, 2 reachable, depth 2
+    Page "     🎨  Color Variables" (4184:1017): 5 direct children, 1135 reachable, depth 6
+    Page "      ❖  Button icon" (4196:36154): 10 direct children, 1990 reachable, depth 11
+    Page "      ❖  Link" (4196:36343): 7 direct children, 1785 reachable, depth 11
+    Page "     🧮  Number Variables" (4351:43558): 7 direct children, 162 reachable, depth 4
+    Page "Variables....................................................................." (4351:43559): 2 direct children, 2 reachable, depth 1
+  Orphaned subtrees (unreachable roots): 1

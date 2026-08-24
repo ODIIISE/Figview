@@ -1,0 +1,15 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\ImazAi - AI Image Website UI KIT.fig
+  parsed in 3.54s
+  Prelude: fig-kiwi
+  Version: 52
+  Schema defs: 327
+  File: ImazAi - AI Image Website UI KIT
+  Nodes: 16605
+  Images: 77
+  Thumbnail: 11492 bytes
+  Pages: 4
+    Page "🎨 ・ Design Style" (4:5): 3 direct children, 659 reachable, depth 10
+    Page "🖥\u{fe0f} ・ UI Design" (4:6): 53 direct children, 5907 reachable, depth 11
+    Page "⌘ ・ Component" (4:7): 9 direct children, 1895 reachable, depth 9
+    Page "🕹\u{fe0f} ・ Icons" (4:8): 20 direct children, 3954 reachable, depth 6
+  Orphaned subtrees (unreachable roots): 1

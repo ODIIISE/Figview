@@ -1,0 +1,98 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\Sublima UI - PRO (v1.0).fig
+  parsed in 34.14s
+  Prelude: fig-kiwi
+  Version: 52
+  Schema defs: 327
+  File: Sublima UI - PRO (v1.0) PREVIEW
+  Nodes: 126385
+  Images: 351
+  Thumbnail: 17833 bytes
+  Pages: 87
+    Page "❖  STYLE GUIDE" (0:1): 1 direct children, 13 reachable, depth 9
+    Page "      Colors" (2:4): 3 direct children, 54923 reachable, depth 11
+    Page "      Typography" (41:12): 3 direct children, 315 reachable, depth 7
+    Page "      Grid layout" (69:8): 5 direct children, 303 reachable, depth 9
+    Page "      Spacing" (70:9): 2 direct children, 404 reachable, depth 9
+    Page "      Effect styles" (143:320): 4 direct children, 75 reachable, depth 6
+    Page "      Icons (800+ Custom icons)" (156:332): 19 direct children, 3136 reachable, depth 10
+    Page "❖  COMPONENTS" (175:487): 1 direct children, 13 reachable, depth 9
+    Page "      Accordion" (573:1252): 3 direct children, 77 reachable, depth 5
+    Page "      Audio" (609:1326): 3 direct children, 291 reachable, depth 8
+    Page "      Avatars" (609:1327): 7 direct children, 3073 reachable, depth 8
+    Page "      Alerts" (611:1336): 2 direct children, 202 reachable, depth 5
+    Page "      Badge" (694:1442): 3 direct children, 1167 reachable, depth 4
+    Page "      Breadcrumb" (709:6482): 3 direct children, 427 reachable, depth 5
+    Page "      Button" (719:2072): 6 direct children, 1549 reachable, depth 5
+    Page "      Button group" (719:2437): 3 direct children, 234 reachable, depth 3
+    Page "      Checkbox" (831:2512): 3 direct children, 489 reachable, depth 4
+    Page "      Code snippet" (854:2866): 2 direct children, 66 reachable, depth 4
+    Page "      Color picker" (905:2887): 2 direct children, 153 reachable, depth 8
+    Page "      Cards" (923:2970): 2 direct children, 161 reachable, depth 7
+    Page "      Divider" (981:3085): 2 direct children, 26 reachable, depth 3
+    Page "      Date picker" (985:3129): 4 direct children, 757 reachable, depth 8
+    Page "      Input" (1133:4418): 2 direct children, 626 reachable, depth 6
+    Page "      Radio" (1193:4839): 3 direct children, 489 reachable, depth 7
+    Page "      Toggle" (1193:16670): 3 direct children, 147 reachable, depth 4
+    Page "      Illustrations" (1210:5704): 2 direct children, 137 reachable, depth 3
+    Page "      Empty state" (1224:5243): 2 direct children, 60 reachable, depth 5
+    Page "❖  PAGE SECTIONS" (1225:4572): 1 direct children, 13 reachable, depth 9
+    Page "      Navbars" (1225:4573): 8 direct children, 723 reachable, depth 9
+    Page "      Hero sections" (1321:38161): 2 direct children, 1764 reachable, depth 11
+    Page "      Background" (1463:9425): 1 direct children, 2739 reachable, depth 5
+    Page "      Feature sections" (1483:24997): 4 direct children, 4159 reachable, depth 11
+    Page "      CTA sections" (1549:17304): 2 direct children, 1478 reachable, depth 11
+    Page "      Mockups" (1593:26706): 5 direct children, 622 reachable, depth 7
+    Page "      Pricing sections" (1623:22263): 4 direct children, 3230 reachable, depth 9
+    Page "      Tabs" (1638:28550): 4 direct children, 502 reachable, depth 3
+    Page "  System" (1696:28345): 3 direct children, 29 reachable, depth 5
+    Page "      Newsletter sections" (1714:50205): 2 direct children, 807 reachable, depth 10
+    Page "      Blog overview sections" (1741:51408): 4 direct children, 774 reachable, depth 13
+    Page "      Metrics sections" (1754:53742): 2 direct children, 1218 reachable, depth 10
+    Page "      Testimonials" (1761:52543): 2 direct children, 1415 reachable, depth 12
+    Page "      Logo clouds" (1782:53088): 2 direct children, 502 reachable, depth 10
+    Page "      Footers" (1782:53089): 4 direct children, 1732 reachable, depth 9
+    Page "      FAQs" (1782:53090): 4 direct children, 588 reachable, depth 9
+    Page "      Team sections" (1782:53091): 2 direct children, 1186 reachable, depth 13
+    Page "      Logos" (1818:53194): 2 direct children, 478 reachable, depth 5
+    Page "      Other icons" (2123:955): 328 direct children, 6578 reachable, depth 7
+    Page "      Banners" (2410:85794): 2 direct children, 709 reachable, depth 9
+    Page "❖  PAGE EXAMPLES" (2414:73828): 1 direct children, 13 reachable, depth 9
+    Page "      Login pages" (2414:73829): 17 direct children, 33 reachable, depth 2
+    Page "      Sign up pages" (2414:73830): 17 direct children, 33 reachable, depth 2
+    Page "      404 pages" (2414:73831): 17 direct children, 73 reachable, depth 2
+    Page "      Landing pages" (2414:73832): 41 direct children, 379 reachable, depth 2
+    Page "      Pricing pages" (2414:73833): 17 direct children, 118 reachable, depth 3
+    Page "      About pages" (2414:73834): 17 direct children, 133 reachable, depth 3
+    Page "      Team pages" (2414:73835): 17 direct children, 109 reachable, depth 3
+    Page "      FAQ pages" (2414:73836): 17 direct children, 91 reachable, depth 2
+    Page "      Blog overview pages" (2414:73837): 17 direct children, 59 reachable, depth 2
+    Page "      Blog detail pages" (2414:73838): 17 direct children, 74 reachable, depth 2
+    Page "      Legal pages" (2414:73839): 17 direct children, 73 reachable, depth 2
+    Page "      Forgot password pages" (2414:73840): 9 direct children, 17 reachable, depth 2
+    Page "      Contact pages" (2414:73841): 19 direct children, 93 reachable, depth 3
+    Page "      Contact sections" (2554:1645): 2 direct children, 1652 reachable, depth 11
+    Page "      Map" (2565:113640): 2 direct children, 8 reachable, depth 3
+    Page "      Subpage header sections" (2617:62556): 2 direct children, 764 reachable, depth 9
+    Page "      Pagination" (2689:59993): 6 direct children, 291 reachable, depth 4
+    Page "      Blog detail sections" (2722:5895): 2 direct children, 1185 reachable, depth 13
+    Page "___________________________" (2795:120036): 0 direct children, 0 reachable, depth 0
+    Page "___________________________" (2795:120037): 0 direct children, 0 reachable, depth 0
+    Page "___________________________" (2795:120038): 0 direct children, 0 reachable, depth 0
+    Page "___________________________" (2795:120039): 0 direct children, 0 reachable, depth 0
+    Page "      Login sections" (2797:1438): 2 direct children, 1167 reachable, depth 13
+    Page "      Signup sections" (2903:11569): 3 direct children, 1167 reachable, depth 11
+    Page "      Forgot password sections" (2955:19202): 2 direct children, 142 reachable, depth 11
+    Page "      404 sections" (2959:9982): 2 direct children, 584 reachable, depth 10
+    Page "Welcome" (2967:9663): 4 direct children, 164 reachable, depth 7
+    Page "❖  Email templates" (2968:9711): 5 direct children, 327 reachable, depth 11
+    Page "      Content sections" (3039:7444): 2 direct children, 446 reachable, depth 9
+    Page "___________________________" (3061:152867): 0 direct children, 0 reachable, depth 0
+    Page "      Tooltip" (3121:32184): 2 direct children, 428 reachable, depth 5
+    Page "      Modals" (3136:1307): 33 direct children, 425 reachable, depth 10
+    Page "      Textareas" (3184:1202): 2 direct children, 132 reachable, depth 7
+    Page "___________________________" (3464:164731): 0 direct children, 0 reachable, depth 0
+    Page "❖  Dashboard" (3464:165041): 1 direct children, 13 reachable, depth 9
+    Page "___________________________" (3476:52682): 0 direct children, 0 reachable, depth 0
+    Page "      Radius" (3914:695): 1 direct children, 74 reachable, depth 6
+    Page "      File upload" (6087:1211): 4 direct children, 116 reachable, depth 7
+  Orphaned subtrees (unreachable roots): 1

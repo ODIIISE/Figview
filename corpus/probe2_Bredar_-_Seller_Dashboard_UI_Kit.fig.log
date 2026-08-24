@@ -1,0 +1,19 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\Bredar - Seller Dashboard UI Kit.fig
+  parsed in 20.31s
+  Prelude: fig-kiwi
+  Version: 48
+  Schema defs: 318
+  File: Bedar - Seller Dashboard UI Kit
+  Nodes: 27354
+  Images: 374
+  Thumbnail: 27479 bytes
+  Pages: 8
+    Page "📐Design" (0:1): 206 direct children, 1220 reachable, depth 14
+    Page "---" (1:2): 0 direct children, 0 reachable, depth 0
+    Page "🌈 Colors" (1:4): 1 direct children, 230 reachable, depth 7
+    Page "🅰\u{fe0f} Typography" (1:5): 1 direct children, 23 reachable, depth 4
+    Page "🦄 Icons" (13:466): 6 direct children, 5271 reachable, depth 8
+    Page "Welcome" (201:167517): 1 direct children, 2 reachable, depth 2
+    Page "📦Component" (1319:219247): 49 direct children, 4616 reachable, depth 12
+    Page "↔ Space & Border" (1401:358304): 2 direct children, 165 reachable, depth 6
+  Orphaned subtrees (unreachable roots): 1

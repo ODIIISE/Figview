@@ -1,0 +1,50 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\LuxDin - Luxury Restaurant Website Framer Template.fig
+  Prelude: fig-kiwi
+  Version: 70
+  Schema defs: 351
+  File: LuxDin - Luxury Restaurant Website UI Design Template
+  Pages: 2
+    Page: Design (0:1)
+      Children: 12
+        148:1145: 12_Contact (Frame)
+        148:627: 11_Blog Details (Frame)
+        138:410: 10_Blog (Frame)
+        123:2085: 09_Reservation (Frame)
+        115:1571: 08_Team (Frame)
+        115:1265: 07_Services (Frame)
+        136:415: 06_Menu Details (Frame)
+        113:739: 05_Menu (Frame)
+        91:503: 04_About (Frame)
+        33:634: 03_Homepage v3 (Frame)
+        ... and 2 more
+    Page: Resources (3:509)
+      Children: 4
+        3:510: Icon Documentation (Frame)
+        3:514: Photo Documentation (Frame)
+        3:518: Resources (Frame)
+        3:520: Logo (Frame)
+  Total nodes: 2032
+  Images: 170
+  Thumbnail: 28626 bytes
+
+  Document tree:
+    Root (0:0) has 3 children
+      0:1: Design (Canvas)
+        148:1145: 12_Contact (Frame)
+        148:627: 11_Blog Details (Frame)
+        138:410: 10_Blog (Frame)
+        123:2085: 09_Reservation (Frame)
+        115:1571: 08_Team (Frame)
+        ... and 7 more
+      0:2: Internal Only Canvas (Canvas)
+        3:3: Cream (RoundedRectangle)
+        3:4: Dark Brown (RoundedRectangle)
+        3:5: Brown 1 (RoundedRectangle)
+        7:25: Body 2 (Text)
+        7:46: Body 1 (Text)
+        ... and 18 more
+      3:509: Resources (Canvas)
+        3:510: Icon Documentation (Frame)
+        3:514: Photo Documentation (Frame)
+        3:518: Resources (Frame)
+        3:520: Logo (Frame)

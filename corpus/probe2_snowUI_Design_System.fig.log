@@ -1,0 +1,24 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\snowUI Design System.fig
+  parsed in 122.50s
+  Prelude: fig-kiwi
+  Version: 70
+  Schema defs: 351
+  File: snowUI Design System
+  Nodes: 163969
+  Images: 264
+  Thumbnail: 36804 bytes
+  Pages: 13
+    Page "👋 Hello" (16:13406): 3 direct children, 69 reachable, depth 6
+    Page "🔶 Base" (8300:425): 11 direct children, 1368 reachable, depth 4
+    Page " — COMPONENTS — " (25583:76989): 1 direct children, 3 reachable, depth 2
+    Page "Database" (59318:85875): 7 direct children, 7 reachable, depth 1
+    Page "🟡 Design system" (60755:3905): 11 direct children, 404 reachable, depth 7
+    Page "🔶 Common" (60755:7995): 23 direct children, 792 reachable, depth 6
+    Page "🔶 Mobile" (60755:7996): 12 direct children, 22 reachable, depth 3
+    Page "🔶 snowUI" (60755:7997): 8 direct children, 66 reachable, depth 4
+    Page "— FOUNDATIONS — " (60755:7998): 1 direct children, 3 reachable, depth 2
+    Page " ———————————" (60755:8012): 1 direct children, 3 reachable, depth 2
+    Page "Made with snowUI" (60755:65940): 1 direct children, 1 reachable, depth 1
+    Page "License" (62583:3308): 1 direct children, 2 reachable, depth 2
+    Page "Libraries in this file" (64724:878): 1 direct children, 1 reachable, depth 1
+  Orphaned subtrees (unreachable roots): 1

@@ -1,0 +1,55 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\Prime 6.0.fig
+  parsed in 3.53s
+  Prelude: fig-kiwi
+  Version: 70
+  Schema defs: 350
+  File: Prime 6.0
+  Nodes: 19640
+  Images: 96
+  Thumbnail: 70786 bytes
+  Pages: 44
+    Page "   ↳ 1. Colors" (3:2): 5 direct children, 1391 reachable, depth 7
+    Page "   ↳ 1. Icons" (115:225): 2536 direct children, 5144 reachable, depth 3
+    Page "   ↳ 1. Typography" (115:24128): 3 direct children, 171 reachable, depth 3
+    Page "❖ Foundations" (115:24291): 0 direct children, 0 reachable, depth 0
+    Page " " (115:24292): 0 direct children, 0 reachable, depth 0
+    Page "   ↳ 1. Grids" (115:24293): 2 direct children, 28 reachable, depth 4
+    Page "   ↳ 1. Shadows & Blurs" (115:24335): 2 direct children, 64 reachable, depth 7
+    Page "   ↳ 1. Payment methods " (115:24336): 43 direct children, 1678 reachable, depth 7
+    Page "   ↳ 1. Flags" (115:24337): 202 direct children, 1655 reachable, depth 3
+    Page " " (129:5024): 0 direct children, 0 reachable, depth 0
+    Page "❖ Utility" (129:5025): 4 direct children, 91 reachable, depth 6
+    Page "❖ Thumbnail" (301:144): 1 direct children, 2 reachable, depth 2
+    Page "   ↳ 1. Device Templates" (319:155): 18 direct children, 1173 reachable, depth 6
+    Page "❖  Components" (402:306): 0 direct children, 0 reachable, depth 0
+    Page " " (402:307): 0 direct children, 0 reachable, depth 0
+    Page "   ↳ 2. Buttons" (402:308): 14 direct children, 1154 reachable, depth 4
+    Page "   ↳ 2. Button Groups " (506:26910): 5 direct children, 181 reachable, depth 3
+    Page "   ↳ 2. Toggles" (507:26911): 11 direct children, 132 reachable, depth 4
+    Page "   ↳ 2. Alerts " (605:6413): 6 direct children, 99 reachable, depth 5
+    Page "   ↳ 2. Avatars" (605:6414): 6 direct children, 136 reachable, depth 3
+    Page "   ↳ 2. Badges" (605:6415): 5 direct children, 215 reachable, depth 3
+    Page "   ↳ 2. Breadcrumbs " (605:6416): 5 direct children, 161 reachable, depth 3
+    Page "   ↳ 2. Cards" (605:6417): 11 direct children, 66 reachable, depth 4
+    Page "   ↳ 2. Content" (605:6418): 11 direct children, 76 reachable, depth 4
+    Page "   ↳ 2. Date Picker " (605:6419): 5 direct children, 184 reachable, depth 4
+    Page "   ↳ 2. Inputs & Dropdowns" (605:6420): 8 direct children, 582 reachable, depth 5
+    Page "   ↳ 2. List Items" (605:6421): 8 direct children, 85 reachable, depth 4
+    Page "   ↳ 2. Modals" (605:6422): 5 direct children, 25 reachable, depth 4
+    Page "   ↳ 2. Menus" (605:6423): 5 direct children, 51 reachable, depth 4
+    Page "   ↳ 2. Pricing" (605:6425): 7 direct children, 119 reachable, depth 5
+    Page "   ↳ 2. Progress indicators" (605:6426): 5 direct children, 72 reachable, depth 3
+    Page "   ↳ 2. Ratings & Reviews" (605:6427): 13 direct children, 202 reachable, depth 3
+    Page "   ↳ 2. Sliders" (605:6428): 6 direct children, 71 reachable, depth 4
+    Page "   ↳ 2. Tables" (605:6429): 8 direct children, 102 reachable, depth 4
+    Page "   ↳ 2. Tabs" (605:6430): 8 direct children, 320 reachable, depth 3
+    Page "   ↳ 2. Tooltips " (605:6431): 4 direct children, 114 reachable, depth 4
+    Page "   ↳ 2. Pagination " (716:15555): 5 direct children, 202 reachable, depth 3
+    Page "   ↳ 2. Navigation Headers" (716:16182): 9 direct children, 65 reachable, depth 5
+    Page "   ↳ 2. Footers" (716:16183): 6 direct children, 74 reachable, depth 7
+    Page "   ↳ 2. Side bars" (716:16184): 8 direct children, 96 reachable, depth 5
+    Page "   ↳ 1. Logos & Media" (813:19086): 281 direct children, 2150 reachable, depth 6
+    Page "● Start here " (1603:19237): 6 direct children, 160 reachable, depth 4
+    Page "✎ Changelog" (2209:4558): 2 direct children, 15 reachable, depth 3
+    Page "   ↳ 2. Tags" (4022:1753): 4 direct children, 184 reachable, depth 3
+  Orphaned subtrees (unreachable roots): 1

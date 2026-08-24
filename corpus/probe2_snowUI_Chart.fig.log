@@ -1,0 +1,25 @@
+Parsing: C:\Users\Mehrdad\Downloads\Telegram Desktop\snowUI Chart.fig
+  parsed in 4.41s
+  Prelude: fig-kiwi
+  Version: 70
+  Schema defs: 351
+  File: snowUI Chart
+  Nodes: 12626
+  Images: 32
+  Thumbnail: 79567 bytes
+  Pages: 14
+    Page "👋 Hello" (0:1): 10 direct children, 32 reachable, depth 5
+    Page "Chart motion" (1:1028): 3 direct children, 597 reachable, depth 4
+    Page "Line chart motion" (16:3904): 7 direct children, 101 reachable, depth 5
+    Page "Bar chart motion" (16:3909): 18 direct children, 3093 reachable, depth 5
+    Page "Donut chart motion" (16:3910): 4 direct children, 455 reachable, depth 5
+    Page "Archive" (16:3911): 143 direct children, 1618 reachable, depth 6
+    Page "🔶 Other" (16:3917): 3 direct children, 105 reachable, depth 4
+    Page "🔶 Chart" (555:3809): 27 direct children, 2759 reachable, depth 5
+    Page "🔶 Donut chart" (595:5130): 12 direct children, 587 reachable, depth 3
+    Page " ———————————" (603:8051): 1 direct children, 1 reachable, depth 1
+    Page "🟢 Charts" (631:2506): 125 direct children, 706 reachable, depth 6
+    Page " — COMPONENTS — " (631:16435): 1 direct children, 1 reachable, depth 1
+    Page "🟢 Instances" (679:22007): 236 direct children, 245 reachable, depth 2
+    Page "Libraries in this file" (705:18747): 3 direct children, 3 reachable, depth 1
+  Orphaned subtrees (unreachable roots): 1
