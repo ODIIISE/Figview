@@ -217,18 +217,60 @@ score vs the resvg oracle. Data picks the track; ambition doesn't.
 
 ---
 
+## 4c. PIVOT (supersedes §4/§4b tracks 1–2): FULL-NATIVE — zero web technology
+
+**Decision (user, Aug 2026):** drop Tauri/WebView/JS entirely. Figview becomes
+a pure-native Rust application. Figma's own blog validates the instinct — they
+built *"a browser inside a browser"* because browsers forced them to; we simply
+don't have that constraint.
+
+### What we gain
+- Direct swapchain presentation (wgpu → DX12/Vulkan) — the readback/IPC class of bugs is structurally impossible
+- One process, one memory space: scenes are shared, not serialized across boundaries
+- Vello compute-shader rasterization + cosmic-text system-font shaping (§4b advantages, now unconditionally)
+- Smaller attack surface, no WebView2 runtime dependency, faster cold start
+
+### What we take on (and the plan for each)
+
+| New responsibility | Choice | Notes |
+|--------------------|--------|-------|
+| **UI toolkit for panels** (pages/layers/inspector/tabs) | **egui + egui-wgpu + egui_dock**, custom Figma-dark theme | Immediate-mode = fastest iteration; docking/tabs included. Rejected: iced (slower iteration), custom-Vello UI (months of work), WinUI (COM interop pain) |
+| **Canvas rasterizer** | **tiny-skia (CPU) primary** · **skia-safe (GPU) escape hatch** · Vello demoted to watchlist | Evidence-based revision (Aug 2026): Vello's own README declares **"alpha state"** — blur/filters unimplemented (#476), glyph caching immature (#204). Unacceptable for a market-quality product. tiny-skia is the engine inside resvg → live renderer and test oracle share engine DNA, making golden-diff tests pixel-meaningful. If profiling demands GPU later, upgrade to Skia (the actual engine inside Figma/Chrome), not an alpha project |
+| Canvas composition | Rendered scene presented each frame; egui paints chrome around it; selection handles drawn in-scene | One window, one event loop |
+| Windowing / input / DPI | winit; per-monitor DPI scale applied to camera + UI scale factor | Pen/stylus via winit pointer types |
+| Renderer duality | Same `Renderer` trait: `tiny_skia` (default) ↔ `skia_gpu` (opt-in, later) | Runtime auto-select with user override in settings |
+| Single-instance file open | Named-pipe server; second launch forwards argv then exits | Standard Windows viewer behavior |
+| .fig association | Registry entries written by installer; portable mode manual | M5 |
+| Logging & crash reports | `tracing` + rolling file appender; panic hook writes minidump + last-log dialog | Replaces webview console |
+| Settings & recents | `%APPDATA%\Figview\config.toml` + MRU list | `dirs` crate |
+| UI testing without DOM | Headless frames via the `Renderer` trait in CI → golden-image diff | Deterministic; no display or WARP needed |
+| Accessibility | Known v1 gap: GPU UI invisible to screen readers. Mitigation: complete keyboard navigation; revisit after 1.0 | Honest limitation, documented |
+
+### Updated crate map (replaces §4 table)
+
+```
+figview/                     (bin)   winit loop, egui chrome, Vello canvas, state
+├── fig-kiwi/                (lib)   archive/binary/schema decode  ← survives from v1
+├── fig-model/               (lib)   stable document model (serde/bincode)
+├── fig-scene/               (lib)   flattened draw list, bounds, culling, tiles
+├── fig-render-vello/        (lib)   GPU backend: Vello + cosmic-text
+├── fig-render-cpu/          (lib)   fallback: tiny-skia backend, same trait
+└── fig-golden/              (bin)   inspect/render/svg/gallery/bench CLI + test oracle (resvg)
+```
+
+---
+
 ## 5. Tech stack
 
 | Layer | Choice | Why |
 |-------|--------|-----|
-| Shell | Tauri 2.x (keep) | Already working; small binaries; WebView2 present on Win10+ |
-| Language | Rust + TypeScript | Existing skill set; kiwi crates are Rust-native |
+| Shell | **winit (native window)** — Tauri/WebView dropped per §4c | One process, direct presentation, no browser dependency |
+| UI toolkit | egui + egui-wgpu + egui_dock, custom theme | Fast iteration, docking panels, mature |
+| Canvas raster | **tiny-skia** primary · skia-safe GPU later · Vello watchlist | Vello is alpha (see §4c); tiny-skia = resvg's engine = oracle-consistent; Skia = Figma's own engine class if GPU needed |
+| Text | `cosmic-text` + fontdb for shaping/layout; glyphs rasterized by the active backend | System fonts with real metrics — beats Figma's bundled-font sandbox |
 | Kiwi decode | keep `kiwi-schema` crate | Self-describing schema per file handles version drift |
-| Reference raster | `resvg` + `tiny-skia` + `fontdb` | Industry-standard fidelity incl. text/shadows/masks — the test oracle & export engine |
-| Live renderer | Canvas2D bootstrap → WebGPU-in-WebView fallback → **native Vello viewport target** (§4b) | Correctness first; bake-off at M2 gate decides |
-| Text shaping (native track) | `cosmic-text` / Parley + fontdb | System fonts with real metrics — beats Figma's bundled-font sandbox |
-| Tests | cargo test + DOM smoke + golden-image diffs | Deterministic, CI-runnable |
-| Serialization | bincode + flate2 for scene chunks | Compact, fast, typed |
+| Reference/export | `resvg` (`fig-golden`) | Test oracle + PNG/SVG export engine |
+| Tests | cargo test + headless frame diffs via `Renderer` trait + golden images | Deterministic, CI-runnable without a display |
 
 ---
 
@@ -249,13 +291,13 @@ Each milestone ends with something runnable and demonstrable. Estimates assume e
 - [ ] Side-by-side gallery generator (`fig-golden gallery`) for human eyeballing vs Figma screenshots
 - **Exit criteria:** top-10 corpus pages visually match Figma exports ≥ "recognizably identical" on a written checklist; gaps itemized.
 
-### M2 — New viewer shell (MVP) *(≈ 2 weeks)*
-- [ ] Scene chunk serialization + lazy per-page IPC
-- [ ] Canvas2D renderer: draw-list execution, camera, culling, DPR handling
-- [ ] Overlay: text, selection outline; panels: tabs/pages/layers/properties
-- [ ] Open paths: dialog/drag-drop/CLI arg; progress states with cancel
-- [ ] **Renderer bake-off** (§4b): Canvas2D vs WebGPU-in-WebView vs native-Vello-child-surface on the largest corpus page — cold open ms, pan fps @10k nodes, visual-diff vs resvg oracle. Decision recorded in `docs/DECISIONS.md`.
-- **Exit criteria:** open any corpus file < 2 s; 60 fps pan/zoom on largest page; F1–F5 demoable; renderer track chosen with data.
+### M2 — Native viewer shell (MVP) *(≈ 2–3 weeks)*
+- [ ] winit window + egui chrome: tabs, pages panel, layers tree, inspector, status bar (Figma-dark theme)
+- [ ] tiny-skia canvas: draw-list execution, camera, culling, per-monitor DPI; dirty-rect repainting; selection handles
+- [ ] cosmic-text integration: document text runs with system fonts
+- [ ] Open paths: dialog, drag-drop onto window, CLI arg; progress states with cancel
+- [ ] **Renderer benchmark** (not bake-off): tiny-skia vs corpus — cold-open ms, pan fps @10k nodes, visual diff vs resvg oracle. Record in `docs/DECISIONS.md`; GPU track (Skia) only if budgets fail.
+- **Exit criteria:** open any corpus file < 2 s; 60 fps pan/zoom on largest page; F1–F5 demoable.
 
 ### M3 — Fidelity pass *(≈ 2 weeks)*
 - [ ] Blend modes, clips/masks, booleans, shadows (Canvas2D equivalents), gradient transform edge cases
@@ -268,9 +310,11 @@ Each milestone ends with something runnable and demonstrable. Estimates assume e
 - [ ] Memory/time budgets asserted in CI (N1–N3)
 - **Exit criteria:** zero hangs/fuzz crashes; budgets met on corpus.
 
-### M5 — Polish & release 0.9 beta *(≈ 1 week)*
-- [ ] Installer + .fig association + recent files + export PNG/SVG (F7, F8)
-- [ ] Icon/branding, error UX, guide refresh
+### M5 — Polish & release 0.9 beta *(≈ 1–2 weeks)*
+- [ ] Installer (NSIS) with .fig association; portable exe; **single-instance named-pipe open**
+- [ ] Recent files MRU + `%APPDATA%` settings; logging + panic-hook crash dialog
+- [ ] Export PNG @1x/2x and SVG via `fig-golden` engine in-process
+- [ ] Keyboard-complete navigation; error UX; guide refresh
 - **Exit criteria:** dogfood daily on your real files for a week; tag v0.9.0.
 
 ### M6 — Performance phase (only if needed) *(≈ 1–2 weeks)*
@@ -307,18 +351,74 @@ Each milestone ends with something runnable and demonstrable. Estimates assume e
 
 ## 9. What we keep from v1 (salvage list)
 
-- Tauri shell, capabilities, CSP, CI skeleton, MSVC toolchain setup ✔
-- `fig-parser` archive/binary/zstd layers (M0 will instrument rather than rewrite them)
-- lyon-based tessellation learnings (dropped for now; Canvas2D paths natively consume path data)
-- Camera math + unit tests ✔ (ported into ui/)
+- `fig-parser` archive/binary/zstd layers — survives as `fig-kiwi` (M0 instruments, doesn't rewrite)
+- CI skeleton + MSVC toolchain setup ✔
+- Camera math + unit tests ✔
 - GitHub CLI workflow, commit/push cadence ✔
+- ~~Tauri shell~~ dropped (§4c) · ~~lyon tessellation~~ dropped (draw-list paths consumed natively)
 
 ## 10. Decisions needed before coding starts
 
-| # | Question | Default if no answer |
-|---|----------|---------------------|
-| D1 | Architecture sign-off: layered crates + renderer tracks per §4/§4b (Canvas2D bootstrap → bake-off at M2; native Vello viewport as the ambition, WebGPU-in-webview as fallback)? | Proceed as written |
-| D2 | Windows-only first, macOS/Linux later? | Yes — Windows first (also unlocks the child-surface native track) |
-| D3 | Can you provide 10–30 real .fig files (incl. the one that hung) for the corpus? | Public samples only — much weaker |
-| D4 | Priority when fidelity conflicts with speed: correct-but-slower, or fast-but-approximate? | Correct first, optimize in M6 (**ANSWERED: fidelity first**) |
-| D5 | Distribution: portable exe only, or also signed installer? | Portable first (matches v1) |
+| # | Question | Status |
+|---|----------|--------|
+| D1 | Architecture | **ANSWERED: full-native, zero web (§4c)** |
+| D2 | Platform scope | **ANSWERED: Windows first** |
+| D3 | Provide 10–30 real .fig files (incl. the one that hung) for the corpus? | ⬜ Open — public samples only until provided |
+| D4 | Fidelity vs speed priority | **ANSWERED: fidelity first** |
+| D5 | Distribution: portable exe only, or also signed installer? | Default: portable first |
+| D6 | Product name — cannot ship as "Figma v2" or use "Figma" in the product name (trademark) | ⬜ Open — needs naming before M5 marketing/website |
+
+---
+
+## 11. From viewer to "Figma v2": quality system & go-to-market reality
+
+The ambition is to build something that changes the market the way Figma
+changed it. Here is the honest engineering path to that.
+
+### 11.1 The lesson of Figma vs Sketch/XD
+
+Figma did not beat Sketch by matching it feature-for-feature. It won by
+changing **one dimension they structurally couldn't copy** (real-time browser
+collaboration), entering through a wedge (free tier, design hand-off), and only
+then expanding into a full editor over ~9 years with a large funded team.
+
+Our equivalent wedge — dimensions Figma structurally can't offer:
+
+1. **True offline & local-first** — files never leave the machine; works air-gapped
+2. **Native performance** — instant cold start, no browser sandbox ceiling
+3. **Privacy by architecture** — nothing to upload, nothing to leak
+4. **Open file philosophy** — treat .fig (and later .sketch/.penpot) as first-class citizens
+
+### 11.2 Phased product strategy
+
+| Phase | Product | Milestones | Market role |
+|-------|---------|-----------|-------------|
+| A | **Best-in-class .fig viewer** | M0–M5 (this roadmap) | Wedge: earn trust, users, and crash-free reputation |
+| B | **Viewer++**: compare mode, dev-handoff (measure/spec/export CSS), presentation mode | M6–M8 | Daily-use tool; the app designers keep open next to Figma |
+| C | **Editor ambitions** (vector editing, components, prototyping) | Post-1.0, own roadmap | Only after Phase B adoption proves demand |
+
+Hard rule from §8 stands: no editing features before 1.0 ships.
+
+### 11.3 Engineering quality system ("solid, fast, smooth, bug-free")
+
+Market-ready is an operational bar, not a vibe. Gates every release must pass:
+
+| Gate | Target |
+|------|--------|
+| Crash-free sessions | ≥ 99.5% across corpus dogfooding week |
+| Corpus verdicts | 100% parse-or-clean-fail; zero hangs (timeout guards everywhere) |
+| Golden-image diffs | Zero unexplained deltas vs resvg oracle on corpus |
+| Performance budgets | §3 N1–N3 verified per release on reference machine |
+| Pan/zoom smoothness | Frame-time p95 < 16.6 ms on largest corpus page |
+| Fuzzing | 24h clean on kiwi decode before each minor release |
+| Release train | Patch releases any time; minor features in weekly/biweekly cuts; every commit green in CI |
+
+Process: every bug becomes a corpus fixture (§7); dogfood daily during M5;
+opt-in anonymous telemetry (crash counts, feature usage) added at Phase B to
+steer priorities — never by default.
+
+### 11.4 Naming & legal guardrails
+
+- Do **not** market as "Figma v2" or include "Figma" in the product name (Figma, Inc. trademark). Positioning language: *"Opens Figma® .fig files offline"* with trademark notice — same pattern fig2sketch uses.
+- Choose product name before M5 (website/installer depend on it).
+
