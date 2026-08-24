@@ -399,7 +399,7 @@ Our equivalent wedge — dimensions Figma structurally can't offer:
 | Phase | Product | Milestones | Market role |
 |-------|---------|-----------|-------------|
 | A | **Best-in-class .fig viewer** | M0–M5 (this roadmap) | Wedge: earn trust, users, and crash-free reputation |
-| B | **Viewer++**: compare mode, dev-handoff (measure/spec/export CSS), presentation mode | M6–M8 | Daily-use tool; the app designers keep open next to Figma |
+| B | **Viewer++**: compare mode, dev-handoff (measure/spec/export CSS), presentation mode, **web export: frame → clean HTML/CSS/SVG (VISION §4b contract)** | M6–M8 | Daily-use tool; the app designers keep open next to Figma |
 | C | **Editor ambitions** (vector editing, components, prototyping) | Post-1.0, own roadmap | Only after Phase B adoption proves demand |
 
 Hard rule from §8 stands: no editing features before 1.0 ships.

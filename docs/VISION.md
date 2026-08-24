@@ -90,7 +90,34 @@ entirely**, making `.fig` irrelevant the way `.psd` receded. Counter-strategy:
 | **P4 Shaders & Materials** | "Infinite effects, not eight canned blurs" | Node-based material editor; WGSL/GLSL shader layers with live preview through the same raster pipeline; safe sandboxed execution; shareable material packs |
 | **P5 Local-first Collaboration** | "Multiplayer when you want it, Git when you don't" | CRDT sync (optional relay, self-hostable); plain-text chunked format → branch/diff/merge in-app; comment threads anchored to geometry |
 | **P6 AI Copilot (private)** | "Assistance without surveillance" | On-device models (layout cleanup, naming, alt-text, variant gen, text→edit ops); BYO-key cloud adapters clearly labeled; training data: never you |
-| **P7 Platform** | "An ecosystem, not an app" | WASM plugin API (wasmtime sandbox), CLI (`fig` command), headless render farm mode, publish-to-static-web |
+| **P7 Platform** | "An ecosystem, not an app" | WASM plugin API (wasmtime sandbox), CLI (`fig` command), headless render farm mode |
+| **P8 Publish to Web** | "Every canvas becomes a real website" | Framer/Webflow-class export & publishing (see §4b) |
+
+### 4b. Publish to Web — the export-first contract
+
+Framer and Webflow proved designers will adopt a tool whose canvas *is* the
+website. Our contract: **everything drawn can become clean, semantic,
+responsive web output — never a screenshot.**
+
+| Canvas concept | Web translation |
+|----------------|-----------------|
+| Frames with auto-layout | Flexbox/Grid containers (not absolutely-positioned div soup) |
+| Text layers | Real selectable HTML text with webfont loading, correct hierarchy tags |
+| Vectors/booleans/icons | Inline `<svg>` symbols with `<use>` deduplication |
+| Solid/gradient fills, shadows, radii, opacity, blend modes | Native CSS where expressible (most cases); fallback to inline SVG filters only when needed |
+| Images | Optimized AVIF/WebP + `srcset`, lazy loading |
+| Components/variants | Web Components or framework components (React/Vue/Svelte targets) |
+| Interactions (hover, click states from P2 later) | CSS transitions/state classes; prototypes become clickable sites |
+| Pages | Routes or single-page anchors; sitemap from page tree |
+| 3D layers (P3) | Embedded lightweight WebGL viewer component |
+
+Delivery modes, in order:
+1. **Export folder** — static HTML/CSS/JS + assets zip (works offline, Git-friendly)
+2. **Publish** — one-click deploy of static bundle to user's own host (Netlify/Vercel/GH Pages/SFTP); we stay out of the hosting business
+3. **Inspect mode** — click any element on canvas → see (and copy) the exact HTML/CSS it would produce
+
+Quality gate: exported markup must pass a linter and be readable by a
+developer — "View Source should not embarrass us."
 
 ---
 
@@ -133,6 +160,7 @@ Non-negotiables:
 - **Format before features.** `fig-format` ships stable in Phase B; losing the format means losing the moat.
 - **Editing = commands.** All mutations are serializable, replayable commands (property-testable, gives undo for free, later drives collab).
 - **Renderer trait stays narrow.** CPU/GPU swap remains a config choice forever.
+- **Dual representation (web-export contract, §4b).** The scene exists twice: a *render-optimized* draw list (what the canvas rasterizes) and the *semantic document tree* (layout, text runs, styles, hierarchy). Renderers consume only the former; **P8 export consumes only the latter.** Baking text to paths or flattening layout in the model is forbidden — it would make Framer-class web export impossible later.
 
 ### 5.2 Lifecycle & support policy
 
@@ -149,7 +177,7 @@ Non-negotiables:
 |-------|------|-------|---------------|------|
 | **0** | Foundation | Diagnostics, corpus, golden oracle | Zero-hang guarantee on corpus | ✅ current |
 | **1** | Viewer GA 1.0 | Full-fidelity read-only viewer, installer, associations | §11.3 quality gates green; daily dogfooding | Q4 2026 |
-| **2** | Viewer++ | Measure/spec/CSS-Swift-tokens handoff, compare diffing, presentation mode | Designers use it *next to* Figma daily | Q1–Q2 2027 |
+| **2** | Viewer++ | Measure/spec/CSS-Swift-tokens handoff, compare diffing, presentation mode, **first web export: frame → clean HTML/CSS/SVG (P8 contract)** | Designers use it *next to* Figma daily; exported frames look right in a browser | Q1–Q2 2027 |
 | **3** | Editor Alpha | Select/move/edit vectors/text, auto-layout¹, **command system + undo lands here** | Edit own templates end-to-end; crash-free under edit load | Q3 2027 → |
 | **4** | Collab & Format 1.0 | fig-format 1.0 spec, Git workflow UX, optional CRDT multiplayer | Branch/merge demo beats Figma branching | 2028 |
 | **5** | Motion | Pillar P2 timeline + state machines | Interactive prototype exported to web/runtime | 2028 |
